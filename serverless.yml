@@ -1,0 +1,10 @@
+seguimientoVehiculos:
+  component: "@sls-next/serverless-component@3.7.0"
+  inputs:
+    name:
+      defaultLambda:  ${env.LAMBDA}
+      apiLambda:  ${env.APILAMBDA}
+      imageLambda:  ${env.IMGLAMBDA}
+    bucketName: ${env.BUCKETNAME}
+    cloudfront:
+      distributionId: ${env.DISTRIBUTIONID}
