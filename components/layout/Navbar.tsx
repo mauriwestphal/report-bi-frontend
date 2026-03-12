@@ -42,7 +42,7 @@ export function Navbar() {
 
   return (
     <nav className="uss-mainnav">
-      <div className="uss-mainnav__wrap">
+      <div className="uss-mainnav__wrap" style={{ paddingLeft: '2rem', paddingRight: '2rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', flex: 1 }}>
           <span
             style={{
