@@ -1,16 +1,14 @@
 'use client'
 
-import { useTheme } from '@/hooks/useTheme'
 import { useApp } from '@/hooks/useApp'
 import { Navbar } from './Navbar'
 import { Spinner } from '@/components/ui/Spinner'
 
 export function AppShell({ children }: { children: React.ReactNode }) {
-  const { theme } = useTheme()
   const { isLoading } = useApp()
 
   return (
-    <div data-theme={theme} style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <Navbar />
       <main style={{ flex: 1, padding: '2rem' }}>
         {isLoading ? (

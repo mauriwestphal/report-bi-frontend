@@ -1,9 +1,8 @@
 import Cookies from 'js-cookie';
-
-const COOKIE_NAME = 'gama-seguimiento-vehiculos.token';
+import { TOKEN_COOKIE_NAME } from './constants';
 
 export function getToken(): string | undefined {
-  return Cookies.get(COOKIE_NAME);
+  return Cookies.get(TOKEN_COOKIE_NAME);
 }
 
 export function isTokenValid(token: string): boolean {
@@ -20,9 +19,9 @@ export function getAuthHeader(token: string): { Authorization: string } {
 }
 
 export function removeToken(): void {
-  Cookies.remove(COOKIE_NAME);
+  Cookies.remove(TOKEN_COOKIE_NAME);
 }
 
 export function saveToken(token: string): void {
-  Cookies.set(COOKIE_NAME, token, { expires: 1 });
+  Cookies.set(TOKEN_COOKIE_NAME, token, { expires: 1 });
 }

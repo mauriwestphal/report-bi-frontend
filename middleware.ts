@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-const COOKIE_NAME = 'gama-seguimiento-vehiculos.token';
+import { TOKEN_COOKIE_NAME } from './lib/constants';
 
 function isTokenExpired(token: string): boolean {
   try {
@@ -12,7 +11,7 @@ function isTokenExpired(token: string): boolean {
 }
 
 export function middleware(request: NextRequest) {
-  const token = request.cookies.get(COOKIE_NAME)?.value;
+  const token = request.cookies.get(TOKEN_COOKIE_NAME)?.value;
 
   if (!token) {
     return NextResponse.redirect(new URL('/auth', request.url));
@@ -26,5 +25,5 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|auth).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|auth|monitor/report).*)'],
 };
