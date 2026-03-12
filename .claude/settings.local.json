@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -r \"TODO\\\\|FIXME\\\\|XXX\\\\|HACK\\\\|BUG\" /c/Repositorios-Mwestphal/report-bi-frontend/pages /c/Repositorios-Mwestphal/report-bi-frontend/services /c/Repositorios-Mwestphal/report-bi-frontend/components --include=*.tsx --include=*.ts)",
+      "Bash(grep -r /*[sS]*?*/ /c/Repositorios-Mwestphal/report-bi-frontend/pages /c/Repositorios-Mwestphal/report-bi-frontend/components --include=*.tsx --include=*.ts)",
+      "Bash(mkdir -p components lib hooks context)",
+      "Bash(touch components/.gitkeep lib/.gitkeep hooks/.gitkeep context/.gitkeep)"
+    ]
+  }
+}
