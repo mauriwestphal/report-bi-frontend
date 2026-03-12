@@ -1,4 +1,4 @@
-export default function MonitorPage() {
+export default function MonitorsPage() {
   return (
     <main>
       <h1>Monitores</h1>

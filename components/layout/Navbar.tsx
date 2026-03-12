@@ -18,17 +18,17 @@ export function Navbar() {
 
   const links: NavLink[] = [
     {
-      href: '/report',
+      href: '/reports',
       label: 'Reportes',
       visible: hasPermission('CAN_VIEW_REPORTS'),
     },
     {
-      href: '/monitor',
+      href: '/monitors',
       label: 'Monitores',
       visible: hasPermission('CAN_CREATE_MONITOR') || hasPermission('CAN_EDIT_MONITOR'),
     },
     {
-      href: '/user-role',
+      href: '/users',
       label: 'Usuarios y Roles',
       visible:
         hasPermission('CAN_CREATE_USER') ||

@@ -15,22 +15,19 @@ const STORAGE_KEY = 'uss-bi-theme';
 const DEFAULT_THEME: Theme = 'dark';
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setTheme] = useState<Theme>(DEFAULT_THEME);
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window === 'undefined') return DEFAULT_THEME;
+    const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
+    return stored === 'light' || stored === 'dark' ? stored : DEFAULT_THEME;
+  });
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
-    const initial = stored === 'light' || stored === 'dark' ? stored : DEFAULT_THEME;
-    setTheme(initial);
-    document.documentElement.setAttribute('data-theme', initial);
-  }, []);
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem(STORAGE_KEY, theme);
+  }, [theme]);
 
   const toggleTheme = () => {
-    setTheme((prev) => {
-      const next: Theme = prev === 'dark' ? 'light' : 'dark';
-      localStorage.setItem(STORAGE_KEY, next);
-      document.documentElement.setAttribute('data-theme', next);
-      return next;
-    });
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
 
   return (

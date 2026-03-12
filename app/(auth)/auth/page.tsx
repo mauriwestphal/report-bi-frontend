@@ -73,9 +73,10 @@ function LoginContent() {
           )}
 
           <button
-            className="uss-btn uss-btn--primary uss-btn--full-width"
+            className="uss-btn uss-btn--primary"
             onClick={handleLogin}
             type="button"
+            style={{ width: '100%', justifyContent: 'center' }}
           >
             Iniciar sesión con Microsoft
           </button>

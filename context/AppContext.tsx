@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { apiFetch } from '@/lib/api'
 import type { PermissionKey, User } from '@/lib/types'
+import { IS_DEV_MODE, MOCK_USER } from '@/lib/mock-user'
 
 interface AppContextValue {
   user: User | null
@@ -21,6 +22,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null)
 
   const refreshUser = async () => {
+    if (IS_DEV_MODE) {
+      setUser(MOCK_USER)
+      setIsLoading(false)
+      return
+    }
     try {
       setIsLoading(true)
       setError(null)

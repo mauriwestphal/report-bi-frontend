@@ -1,7 +1,7 @@
-export default function ReportPage() {
+export default function UsersPage() {
   return (
     <main>
-      <h1>Reportes</h1>
+      <h1>Usuarios</h1>
       <p>Contenido próximamente</p>
     </main>
   )
