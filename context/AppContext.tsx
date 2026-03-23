@@ -1,69 +1,65 @@
-import { Spin } from "antd";
-import { createContext, useContext, useEffect, useState } from "react";
-import { UserInterface } from "../components/layout/interfaces";
-import UserService from "../services/UserService/services";
-import { PERMISSION_TYPE } from "../shared/enum/permission.enum";
-import { getToken } from "../utils/auth";
-import { isTokenValid } from "../utils/token";
+'use client'
 
-interface IUserContext extends UserInterface {
-  activePermissions: PERMISSION_TYPE[];
-  activeReports: number[];
+import { createContext, useContext, useEffect, useState } from 'react'
+import { apiFetch } from '@/lib/api'
+import type { PermissionKey, User } from '@/lib/types'
+import { IS_DEV_MODE, MOCK_USER } from '@/lib/mock-user'
+
+interface AppContextValue {
+  user: User | null
+  isLoading: boolean
+  error: string | null
+  hasPermission: (key: PermissionKey) => boolean
+  refreshUser: () => Promise<void>
+  clearUser: () => void
 }
 
-interface IContext {
-  user?: IUserContext;
-  getUser: ()=>void;
-}
+const AppContext = createContext<AppContextValue | null>(null)
 
-const Context = createContext<IContext>({} as IContext);
+export function AppProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-export function  useAppContext() {
-  return useContext(Context);
-}
+  const refreshUser = async () => {
+    if (IS_DEV_MODE) {
+      setUser(MOCK_USER)
+      setIsLoading(false)
+      return
+    }
+    try {
+      setIsLoading(true)
+      setError(null)
+      const data = await apiFetch<User>('/auth/me')
+      setUser(data)
+    } catch (err) {
+      setUser(null)
+      if (err instanceof Error && !err.message.includes('No token')) {
+        setError(err.message)
+      }
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
-export function AppProvider({ children }: any) {
-  const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState<IUserContext>();
+  const clearUser = () => {
+    setUser(null)
+    setError(null)
+  }
 
+  const hasPermission = (key: PermissionKey): boolean => {
+    return user?.role.permissions.some((p) => p.keyName === key) ?? false
+  }
 
   useEffect(() => {
-    const token = getToken();
-
-    if (token && isTokenValid(token)) {
-      getUser();
-    }
-  }, []);
-
-  const getUser = async () => {
-    setLoading(true);
-    try {
-      const { data } = await UserService.getLoggerUser();
-      if (data && data.role) {
-        const activePermissions = data.role.permissions.map(
-          (permission) => permission.keyName
-        );
-
-        const activeReports = data?.role?.reportPages ? data.role.reportPages.map(
-          (reportPage) => reportPage.value
-        ) : [];
-        
-        setUser({ ...data, activePermissions, activeReports });
-      }
-      setLoading(false);
-    } catch (_) {
-      setLoading(false);
-    }
-  };
-
-  const value = {
-    user,
-    getUser
-  };
+    refreshUser()
+  }, [])
 
   return (
-    <Spin spinning={loading}>
-      <Context.Provider value={value}>{children}</Context.Provider>
-    </Spin>
-  );
+    <AppContext.Provider value={{ user, isLoading, error, hasPermission, refreshUser, clearUser }}>
+      {children}
+    </AppContext.Provider>
+  )
 }
+
+export { AppContext }
