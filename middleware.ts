@@ -11,6 +11,10 @@ function isTokenExpired(token: string): boolean {
 }
 
 export function middleware(request: NextRequest) {
+  if (process.env.NEXT_PUBLIC_MOCK_AUTH === 'true') {
+    return NextResponse.next();
+  }
+
   const token = request.cookies.get(TOKEN_COOKIE_NAME)?.value;
 
   if (!token) {
