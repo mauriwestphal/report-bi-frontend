@@ -1,31 +1,29 @@
 import { useEffect, useState } from "react";
 import Router from "next/router";
-import { Plus, Pencil, Trash2, MoreHorizontal, Eye } from "lucide-react";
-import Layout from "../../components/layout";
-import { PageHeader } from "../../components/shared/PageHeader";
-import { SearchBar } from "../../components/shared/SearchBar";
-import { Button } from "../../components/ui/button";
-import { Skeleton } from "../../components/ui/skeleton";
+import { Pencil, Trash2, MoreHorizontal, Eye } from "lucide-react";
+import { Button } from "../../../ui/button";
+import { Skeleton } from "../../../ui/skeleton";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "../../components/ui/dropdown-menu";
-import { ConfirmDialog } from "../../components/shared/ConfirmDialog";
-import DetailRoleDrawer from "../../components/pages/user-role/Role/DetailRoleDrawer";
+} from "../../../ui/dropdown-menu";
+import { ConfirmDialog } from "../../../shared/ConfirmDialog";
+import { SearchBar } from "../../../shared/SearchBar";
+import DetailRoleDrawer from "./DetailRoleDrawer";
 import { cn } from "@/lib/utils";
-import { notify } from "../../utils/toast";
-import { getValidatedItems } from "../../utils/validatedItems";
-import RoleService from "../../services/RoleService";
-import { RoleInterface } from "../../components/layout/interfaces";
-import { useAppContext } from "../../context/AppContext";
-import { PERMISSION_TYPE } from "../../shared/enum/permission.enum";
-import { List } from "../../services/interfaces/List.interface";
+import { notify } from "../../../../utils/toast";
+import { getValidatedItems } from "../../../../utils/validatedItems";
+import RoleService from "../../../../services/RoleService";
+import { RoleInterface } from "../../../layout/interfaces";
+import { useAppContext } from "../../../../context/AppContext";
+import { PERMISSION_TYPE } from "../../../../shared/enum/permission.enum";
+import { List } from "../../../../services/interfaces/List.interface";
 
 const PAGE_SIZE = 10;
 
-const RolesPage = () => {
+const RoleTab = () => {
   const { user } = useAppContext();
   const [roles, setRoles] = useState<RoleInterface[]>([]);
   const [total, setTotal] = useState(0);
@@ -38,7 +36,6 @@ const RolesPage = () => {
   const [enableDialog, setEnableDialog] = useState<{ open: boolean; item: RoleInterface | null }>({ open: false, item: null });
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const canCreate = user?.activePermissions?.includes(PERMISSION_TYPE.CAN_CREATE_ROLE);
 
   const fetchRoles = (params: List) => {
     setLoading(true);
@@ -86,7 +83,7 @@ const RolesPage = () => {
     }
   };
 
-  const onDelete = async () => {
+  const onDeleteRole = async () => {
     if (!deleteDialog.item) return;
     try {
       setLoading(true);
@@ -116,7 +113,7 @@ const RolesPage = () => {
       {
         label: "Editar",
         permissions: [PERMISSION_TYPE.CAN_EDIT_ROLE],
-        onClick: () => Router.push(`/roles/${item.id}/editar`),
+        onClick: () => Router.push(`user-role/rol/editar/${item.id}`),
         icon: <Pencil className="mr-2 h-4 w-4" />,
       },
       {
@@ -131,48 +128,35 @@ const RolesPage = () => {
   };
 
   return (
-    <Layout>
+    <>
+      <ConfirmDialog
+        open={enableDialog.open}
+        onOpenChange={(o) => !o && setEnableDialog({ open: false, item: null })}
+        title={enableDialog.item?.isActive ? "Desactivar rol" : "Activar rol"}
+        description={
+          enableDialog.item?.isActive
+            ? "¿Estás seguro de desactivar este rol?"
+            : "¿Estás seguro de activar este rol?"
+        }
+        onConfirm={onEnableDisable}
+        confirmLabel="Confirmar"
+        cancelLabel="Cancelar"
+      />
+
+      <ConfirmDialog
+        open={deleteDialog.open}
+        onOpenChange={(o) => !o && setDeleteDialog({ open: false, item: null })}
+        title="Eliminar rol"
+        description="¿Estás seguro de eliminar este rol?"
+        onConfirm={onDeleteRole}
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        variant="destructive"
+      />
+
+      <DetailRoleDrawer id={drawerRoleId} onClose={() => setDrawerRoleId(null)} />
+
       <div className="space-y-4">
-        <PageHeader
-          title="Gestión de Roles"
-          action={
-            canCreate
-              ? {
-                  label: "Nuevo rol",
-                  icon: <Plus className="h-4 w-4" />,
-                  onClick: () => Router.push("/roles/crear"),
-                }
-              : undefined
-          }
-        />
-
-        <ConfirmDialog
-          open={enableDialog.open}
-          onOpenChange={(o) => !o && setEnableDialog({ open: false, item: null })}
-          title={enableDialog.item?.isActive ? "Desactivar rol" : "Activar rol"}
-          description={
-            enableDialog.item?.isActive
-              ? "¿Estás seguro de desactivar este rol?"
-              : "¿Estás seguro de activar este rol?"
-          }
-          onConfirm={onEnableDisable}
-          confirmLabel="Confirmar"
-          cancelLabel="Cancelar"
-        />
-
-        <ConfirmDialog
-          open={deleteDialog.open}
-          onOpenChange={(o) => !o && setDeleteDialog({ open: false, item: null })}
-          title="Eliminar rol"
-          description="¿Estás seguro de eliminar este rol?"
-          onConfirm={onDelete}
-          confirmLabel="Eliminar"
-          cancelLabel="Cancelar"
-          variant="destructive"
-        />
-
-        <DetailRoleDrawer id={drawerRoleId} onClose={() => setDrawerRoleId(null)} />
-
         <SearchBar
           placeholder="Buscar rol"
           value={search}
@@ -191,8 +175,9 @@ const RolesPage = () => {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/50">
-                    <th className="h-10 px-4 text-left font-medium text-muted-foreground">Nombre del rol</th>
-                    <th className="h-10 px-4 text-left font-medium text-muted-foreground">Usuarios asociados</th>
+                    <th className="h-10 px-4 text-left font-medium text-muted-foreground">Nombre</th>
+                    <th className="h-10 px-4 text-left font-medium text-muted-foreground">Key</th>
+                    <th className="h-10 px-4 text-left font-medium text-muted-foreground">Usuarios</th>
                     <th className="h-10 px-4 text-left font-medium text-muted-foreground">Estado</th>
                     <th className="h-10 px-4 text-left font-medium text-muted-foreground">Acciones</th>
                   </tr>
@@ -200,7 +185,7 @@ const RolesPage = () => {
                 <tbody>
                   {roles.length === 0 ? (
                     <tr>
-                      <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
+                      <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
                         No se encontraron roles
                       </td>
                     </tr>
@@ -214,6 +199,7 @@ const RolesPage = () => {
                         )}
                       >
                         <td className="px-4 py-3 font-medium">{item.name}</td>
+                        <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{item.keyName}</td>
                         <td className="px-4 py-3 text-muted-foreground">{item.totalUsers ?? 0}</td>
                         <td className="px-4 py-3">
                           <span
@@ -284,8 +270,8 @@ const RolesPage = () => {
           </>
         )}
       </div>
-    </Layout>
+    </>
   );
 };
 
-export default RolesPage;
+export default RoleTab;

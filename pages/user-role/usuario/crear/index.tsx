@@ -1,38 +1,57 @@
-import { Button, Card, Col, Form, message, Row } from "antd";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Loader2 } from "lucide-react";
 import Layout from "../../../../components/layout";
-import UserForm from "../../../../components/pages/user-role/User/UserForm";
-import TopTitle from "../../../../components/shared/TopTitle";
+import UserForm, { UserFormValues } from "../../../../components/pages/user-role/User/UserForm";
+import { PageHeader } from "../../../../components/shared/PageHeader";
+import { Button } from "../../../../components/ui/button";
+import { notify } from "../../../../utils/toast";
 import UserService from "../../../../services/UserService/services";
 
+const userSchema = z.object({
+  firstName: z.string().min(1, "El nombre es obligatorio"),
+  lastName: z.string().min(1, "El apellido es obligatorio"),
+  email: z.string().email("Ingresa un email válido"),
+  isActive: z.boolean().optional(),
+  roleId: z.number().optional(),
+});
+
 const CreateUserPage = () => {
-  const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
 
-  const onFinish = async () => {
-    const values = await form.validateFields();
+  const form = useForm<UserFormValues>({
+    resolver: zodResolver(userSchema),
+    defaultValues: { isActive: true },
+  });
 
+  const onFinish = async () => {
+    const valid = await form.trigger();
+    if (!valid) return;
+
+    const values = form.getValues();
     const payload = {
       firstName: values.firstName,
       lastName: values.lastName,
       email: values.email,
-      roleId: values.roleId,
+      roleId: values.roleId!,
       isActive: values.isActive ?? true,
     };
 
     setLoading(true);
     UserService.create(payload)
       .then(() => {
-        message.success("Usuario creado correctamente!");
-        form.resetFields();
+        notify.success("Usuario creado correctamente!");
+        form.reset({ isActive: true });
       })
       .catch((reason: any) => {
         if (reason?.statusCode === 409 || reason?.status === 409) {
-          message.error(
+          notify.error(
             "Ya existe un usuario con ese correo electrónico. Por favor verifica los datos."
           );
         } else {
-          message.error(reason?.message || "Error al crear el usuario");
+          notify.error(reason?.message || "Error al crear el usuario");
         }
       })
       .finally(() => setLoading(false));
@@ -40,40 +59,27 @@ const CreateUserPage = () => {
 
   return (
     <Layout>
-      <TopTitle
-        comeBackConfig={{
-          route: "/user-role",
-          show: true,
-          text: "Volver a Usuarios",
-        }}
-        title={{
-          title: "Gestión de Usuarios / Crear nuevo usuario",
-        }}
-      />
+      <div className="max-w-2xl space-y-6">
+        <PageHeader
+          title="Crear nuevo usuario"
+          showBack
+          backRoute="/user-role"
+        />
 
-      <Row gutter={24} className="create-user__container" justify="center">
-        <Col span={12}>
-          <Card bordered={false} style={{ padding: "16px" }}>
-            <UserForm form={form} />
-            <Row
-              gutter={24}
-              className="create-user__container"
-              justify="center"
-              style={{ marginTop: 40 }}
-            >
-              <Button
-                type="primary"
-                block
-                style={{ width: "50%" }}
-                onClick={onFinish}
-                loading={loading}
-              >
-                Crear nuevo usuario
-              </Button>
-            </Row>
-          </Card>
-        </Col>
-      </Row>
+        <div className="rounded-lg border border-border bg-card p-6">
+          <UserForm form={form} />
+
+          <div className="flex gap-3 pt-6 mt-4 border-t border-border">
+            <Button variant="outline" onClick={() => form.reset({ isActive: true })}>
+              Limpiar
+            </Button>
+            <Button onClick={onFinish} disabled={loading}>
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Crear nuevo usuario
+            </Button>
+          </div>
+        </div>
+      </div>
     </Layout>
   );
 };

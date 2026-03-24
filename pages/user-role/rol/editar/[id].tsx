@@ -1,38 +1,60 @@
-import { Button, Card, Col, Form, Row } from "antd";
-import Layout from "../../../../components/layout";
-import RoleForm from "../../../../components/pages/user-role/Role/RoleForm";
-import TopTitle from "../../../../components/shared/TopTitle";
 import { useEffect, useState } from "react";
-import RoleService from "../../../../services/RoleService";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Loader2 } from "lucide-react";
 import { useRouter } from "next/router";
-import { useNotification } from "../../../../components/shared/Notifications";
+import Layout from "../../../../components/layout";
+import RoleForm, { RoleFormValues } from "../../../../components/pages/user-role/Role/RoleForm";
+import { PageHeader } from "../../../../components/shared/PageHeader";
+import { Button } from "../../../../components/ui/button";
+import { Skeleton } from "../../../../components/ui/skeleton";
+import { notify } from "../../../../utils/toast";
+import RoleService from "../../../../services/RoleService";
+
+const roleSchema = z.object({
+  name: z.string().min(1, "Campo requerido"),
+  keyName: z.string().min(1, "Campo requerido"),
+  isActive: z.boolean().optional(),
+  permissions: z.array(z.number()).optional(),
+  report: z.array(z.number()).optional(),
+  reportPages: z.array(z.number()).optional(),
+});
 
 const EditRolePage = () => {
-  const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
   const { query } = useRouter();
-  const { openNotification, contextHolder } = useNotification();
+  const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+
+  const form = useForm<RoleFormValues>({
+    resolver: zodResolver(roleSchema),
+    defaultValues: { isActive: true, permissions: [], report: [], reportPages: [] },
+  });
 
   useEffect(() => {
     if (!query?.id) return;
-
-    setLoading(true);
+    setInitialLoading(true);
     RoleService.findOne(Number(query.id))
       .then(({ data }) => {
-        form.setFieldsValue({
-          ...data,
+        form.reset({
+          name: data.name,
+          keyName: data.keyName ?? "",
+          isActive: data.isActive ?? true,
           permissions: data.permissions?.map((p) => p.id) ?? [],
+          report: [],
           reportPages: data.reportPages?.map((rp) => rp.value) ?? [],
         });
       })
-      .finally(() => setLoading(false));
-  }, [query]);
+      .finally(() => setInitialLoading(false));
+  }, [query.id]);
 
   const onFinish = async () => {
+    const valid = await form.trigger(["name", "keyName"]);
+    if (!valid) return;
+
     try {
       setLoading(true);
-      const values = await form.validateFields();
-
+      const values = form.getValues();
       await RoleService.update({
         id: Number(query.id),
         name: values.name,
@@ -41,55 +63,43 @@ const EditRolePage = () => {
         permissionIds: values.permissions || [],
         reportPageIds: values.reportPages || [],
       });
-
-      openNotification("success", "Rol editado exitosamente!");
+      notify.success("Rol editado exitosamente!");
     } catch (err: any) {
-      if (err?.message) {
-        openNotification("error", err.message);
-      }
+      notify.error(err?.message || "Error al editar el rol");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <>
-      {contextHolder}
-      <Layout>
-        <TopTitle
-          comeBackConfig={{
-            route: "/user-role?active=role",
-            show: true,
-            text: "Volver a Roles",
-          }}
-          title={{ title: "Gestión de Roles / Editar rol" }}
+    <Layout>
+      <div className="max-w-2xl space-y-6">
+        <PageHeader
+          title="Editar rol"
+          showBack
+          backRoute="/user-role?active=role"
         />
 
-        <Row gutter={24} className="create-role__container" justify="center">
-          <Col span={12}>
-            <Card bordered={false} style={{ padding: "16px" }}>
-              <RoleForm form={form} />
-              <Row
-                gutter={24}
-                className="create-role__container"
-                justify="center"
-                style={{ marginTop: 129 }}
-              >
-                <Button
-                  type="primary"
-                  block
-                  style={{ width: "50%" }}
-                  onClick={onFinish}
-                  loading={loading}
-                >
-                  <span style={{ color: "#fff" }}>Editar rol</span>
-                </Button>
-              </Row>
-            </Card>
-          </Col>
-        </Row>
-      </Layout>
-    </>
+        <div className="rounded-lg border border-border bg-card p-6">
+          {initialLoading ? (
+            <div className="space-y-4">
+              {[...Array(4)].map((_, i) => (
+                <Skeleton key={i} className="h-10 w-full" />
+              ))}
+            </div>
+          ) : (
+            <RoleForm form={form} />
+          )}
+
+          <div className="flex gap-3 pt-6 mt-4 border-t border-border">
+            <Button onClick={onFinish} disabled={loading || initialLoading}>
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Guardar cambios
+            </Button>
+          </div>
+        </div>
+      </div>
+    </Layout>
   );
 };
 

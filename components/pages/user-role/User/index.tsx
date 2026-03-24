@@ -1,257 +1,273 @@
-import { Badge, message, Tag } from "antd";
-import { ColumnsType, TablePaginationConfig } from "antd/es/table";
-import { FilterValue } from "antd/es/table/interface";
-import { useEffect, useMemo, useState } from "react";
-import {
-  Direction,
-  List,
-} from "../../../../services/interfaces/List.interface";
-import UserService from "../../../../services/UserService/services";
-import { RoleInterface, UserInterface } from "../../../layout/interfaces";
-import ActionMenu from "../../../shared/ActionMenu";
-import Table from "../../../shared/Table";
+import { useEffect, useState } from "react";
 import Router from "next/router";
-import TopSearch from "../../../shared/TopSearch";
-import { TableTabsStyled } from "../../../shared/TableTabs/style";
+import { Pencil, Trash2, MoreHorizontal } from "lucide-react";
+import { Button } from "../../../ui/button";
+import { Skeleton } from "../../../ui/skeleton";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../../../ui/dropdown-menu";
+import { ConfirmDialog } from "../../../shared/ConfirmDialog";
+import { SearchBar } from "../../../shared/SearchBar";
+import { cn } from "@/lib/utils";
+import { notify } from "../../../../utils/toast";
+import { getValidatedItems } from "../../../../utils/validatedItems";
+import UserService from "../../../../services/UserService/services";
+import { UserInterface, RoleInterface } from "../../../layout/interfaces";
 import { useAppContext } from "../../../../context/AppContext";
 import { PERMISSION_TYPE } from "../../../../shared/enum/permission.enum";
-import { getValidatedItems } from "../../../../utils/validatedItems";
-import ActionMenuModal from "../../../shared/ActionMenuModal";
+import { List } from "../../../../services/interfaces/List.interface";
+
+const PAGE_SIZE = 10;
 
 const UserTab = () => {
   const { user } = useAppContext();
+  const [users, setUsers] = useState<UserInterface[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [users, setUsers] = useState<UserInterface[]>();
-  const [isDeleteModalActive, setIsDeleteModalActive] = useState(false);
-  const [isEnableModalActive, setIsEnableModalActive] = useState(false);
-  const [activeElementModal, setActiveElementModal] = useState({
-    id: 0,
-    body: {
-      isActive: false,
-    },
-  });
+  const [search, setSearch] = useState("");
 
-  const [page, setPage] = useState({
-    pageSize: 10,
-    skip: 0,
-    total: 0,
-  });
+  const [deleteDialog, setDeleteDialog] = useState<{ open: boolean; item: UserInterface | null }>({ open: false, item: null });
+  const [enableDialog, setEnableDialog] = useState<{ open: boolean; item: UserInterface | null }>({ open: false, item: null });
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  const fetchUsers = (params: List) => {
+    setLoading(true);
+    UserService.list(params)
+      .then(({ data }) => {
+        const items = (data as any).users ?? (data as any).data ?? [];
+        const tot = (data as any).total ?? 0;
+        setUsers(items);
+        setTotal(tot);
+      })
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
-    const { pageSize, skip } = page;
-    fetch({ take: pageSize, skip });
+    fetchUsers({ take: PAGE_SIZE, skip: 0 });
   }, []);
 
-  const fetch = (params: List): void => {
-    setLoading(true);
-    UserService.list(params).then(({ data }) => {
-      const items = (data as any).users ?? (data as any).data ?? [];
-      const total = (data as any).total ?? 0;
-      setUsers(items);
-      setLoading(false);
-      setPage((prevPage) => ({ ...prevPage, total }));
-    });
+  const changePage = (newPage: number) => {
+    setPage(newPage);
+    fetchUsers({ take: PAGE_SIZE, skip: (newPage - 1) * PAGE_SIZE, search: search || undefined });
   };
 
-  const onTableChange = (
-    pagination: TablePaginationConfig,
-    _filters: Record<string, FilterValue | null>,
-    sorter: any
-  ) => {
-    const temporalPage = {
-      pageSize: pagination.pageSize as number,
-      skip:
-        ((pagination.current as number) - 1) * (pagination.pageSize as number),
-      total: page.total,
-      current: pagination.current,
-    };
-    setPage(temporalPage);
-
-    fetch({
-      take: temporalPage.pageSize,
-      skip: temporalPage.skip,
-      sortField: sorter.field,
-      sortOrder:
-        sorter.order === "ascend" ? Direction.ASCENDANT : Direction.DESCENDANT,
-    });
+  const handleSearch = (value: string) => {
+    setSearch(value);
+    setPage(1);
+    fetchUsers({ take: PAGE_SIZE, skip: 0, search: value || undefined });
   };
 
-  const onSearch = (search: string) => {
-    const { pageSize, skip } = page;
-    fetch({ take: pageSize, skip, search });
-  };
-
-  const onCancelModal = () => {
-    setActiveElementModal({ id: 0, body: { isActive: false } });
-    setIsDeleteModalActive(false);
-    setIsEnableModalActive(false);
-  };
-
-  const onEnableDisableUser = async (id: number) => {
+  const onEnableDisable = async () => {
+    if (!enableDialog.item) return;
     try {
-      const { pageSize, skip } = page;
       setLoading(true);
       await UserService.update({
-        id,
-        isActive: !activeElementModal.body.isActive,
+        id: enableDialog.item.id!,
+        isActive: !enableDialog.item.isActive,
       });
-
-      message.success(
-        `Usuario ${
-          !activeElementModal.body.isActive ? "activado" : "desactivado"
-        } exitosamente!`
+      notify.success(
+        `Usuario ${!enableDialog.item.isActive ? "activado" : "desactivado"} exitosamente!`
       );
-      fetch({ take: pageSize, skip });
+      fetchUsers({ take: PAGE_SIZE, skip: (page - 1) * PAGE_SIZE, search: search || undefined });
     } catch {
       setLoading(false);
-      message.error("Ocurrió un error al intentar actualizar la información.");
+      notify.error("Ocurrió un error al intentar actualizar la información.");
+    } finally {
+      setEnableDialog({ open: false, item: null });
     }
   };
 
-  const onDeleteUser = async (id: number) => {
+  const onDeleteUser = async () => {
+    if (!deleteDialog.item) return;
     try {
-      const { pageSize, skip } = page;
       setLoading(true);
-      await UserService.deleteUser(id);
-      message.success("Usuario eliminado exitosamente!");
-      fetch({ take: pageSize, skip });
+      await UserService.deleteUser(deleteDialog.item.id!);
+      notify.success("Usuario eliminado exitosamente!");
+      fetchUsers({ take: PAGE_SIZE, skip: (page - 1) * PAGE_SIZE, search: search || undefined });
     } catch {
       setLoading(false);
-      message.error("Ocurrió un error al intentar eliminar el usuario.");
+      notify.error("Ocurrió un error al intentar eliminar el usuario.");
+    } finally {
+      setDeleteDialog({ open: false, item: null });
     }
   };
 
-  const actionOptions = (item: UserInterface) => [
-    {
-      label: item.isActive ? "Desactivar usuario" : "Activar usuario",
-      key: 0,
-      onClick: () => {
-        setActiveElementModal({
-          id: item.id || 0,
-          body: { isActive: item.isActive },
-        });
-        setIsEnableModalActive(true);
-      },
-      permissions: [PERMISSION_TYPE.CAN_ENABLE_USER],
-    },
-    {
-      label: "Eliminar",
-      key: 1,
-      onClick: async () => {
-        setActiveElementModal({
-          id: item.id || 0,
-          body: { isActive: item.isActive },
-        });
-        setIsDeleteModalActive(true);
-      },
-      permissions: [PERMISSION_TYPE.CAN_DELETE_USER],
-    },
-    {
-      label: "Editar",
-      key: 2,
-      onClick: () => Router.push(`user-role/usuario/editar/${item.id}`),
-      permissions: [PERMISSION_TYPE.CAN_EDIT_USER],
-    },
-  ];
-
-  const columns: ColumnsType<UserInterface> = useMemo(
-    () => [
+  const getRowActions = (item: UserInterface) => {
+    const all = [
       {
-        title: "Nombre completo",
-        key: "fullName",
-        render: (_: any, item: UserInterface) =>
-          `${item.firstName} ${item.lastName}`,
-        sorter: true,
-        showSorterTooltip: false,
+        label: item.isActive ? "Desactivar usuario" : "Activar usuario",
+        permissions: [PERMISSION_TYPE.CAN_ENABLE_USER],
+        onClick: () => setEnableDialog({ open: true, item }),
       },
       {
-        title: "Correo electrónico",
-        dataIndex: "email",
-        sorter: true,
-        showSorterTooltip: false,
+        label: "Editar",
+        permissions: [PERMISSION_TYPE.CAN_EDIT_USER],
+        onClick: () => Router.push(`user-role/usuario/editar/${item.id}`),
+        icon: <Pencil className="mr-2 h-4 w-4" />,
       },
       {
-        title: "Perfil",
-        dataIndex: "role",
-        render: (item: RoleInterface) => (
-          <Tag color="#434343">{item?.name || "Sin perfil"}</Tag>
-        ),
-        sorter: true,
-        showSorterTooltip: false,
+        label: "Eliminar",
+        permissions: [PERMISSION_TYPE.CAN_DELETE_USER],
+        onClick: () => setDeleteDialog({ open: true, item }),
+        icon: <Trash2 className="mr-2 h-4 w-4" />,
+        destructive: true,
       },
-      {
-        title: "Estado",
-        dataIndex: "isActive",
-        sorter: true,
-        showSorterTooltip: false,
-        render: (isActive: boolean) =>
-          isActive ? (
-            <Badge color="#79BB61" text="Activo" />
-          ) : (
-            <Badge color="#DF545C" text="Inactivo" />
-          ),
-      },
-      {
-        title: "Acciones",
-        dataIndex: "actions",
-        render: (_: any, item: UserInterface) => {
-          const validatedItems = getValidatedItems(
-            actionOptions(item),
-            user?.activePermissions
-          );
-          return <ActionMenu options={validatedItems} />;
-        },
-        className: "action-column",
-      },
-    ],
-    [user?.activePermissions]
-  );
+    ];
+    return getValidatedItems(all, user?.activePermissions);
+  };
 
   return (
     <>
-      <ActionMenuModal
-        open={isEnableModalActive}
-        actionalId={activeElementModal.id}
-        onConfirm={onEnableDisableUser}
-        onCancel={onCancelModal}
-        width={380}
-        content={
-          <p>
-            {activeElementModal.body.isActive
-              ? "¿Estás seguro de desactivar este usuario?"
-              : "¿Estás seguro de activar este usuario?"}
-          </p>
+      <ConfirmDialog
+        open={enableDialog.open}
+        onOpenChange={(o) => !o && setEnableDialog({ open: false, item: null })}
+        title={enableDialog.item?.isActive ? "Desactivar usuario" : "Activar usuario"}
+        description={
+          enableDialog.item?.isActive
+            ? "¿Estás seguro de desactivar este usuario?"
+            : "¿Estás seguro de activar este usuario?"
         }
+        onConfirm={onEnableDisable}
+        confirmLabel="Confirmar"
+        cancelLabel="Cancelar"
       />
-      <ActionMenuModal
-        open={isDeleteModalActive}
-        actionalId={activeElementModal.id}
+
+      <ConfirmDialog
+        open={deleteDialog.open}
+        onOpenChange={(o) => !o && setDeleteDialog({ open: false, item: null })}
+        title="Eliminar usuario"
+        description="¿Estás seguro de eliminar este usuario?"
         onConfirm={onDeleteUser}
-        onCancel={onCancelModal}
-        width={380}
-        content={<p>¿Estás seguro de eliminar este usuario?</p>}
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
+        variant="destructive"
       />
-      <TableTabsStyled>
-        <div className="table-tab-container">
-          <TopSearch
-            search={{
-              placeholder: "Buscar usuarios",
-              onClick: (search: string) => onSearch(search),
-            }}
-          />
-          <Table
-            columns={columns}
-            dataSource={users}
-            onChange={onTableChange}
-            loading={loading}
-            pagination={{ ...page }}
-            rowKey="id"
-            rowClassName={(record: UserInterface) =>
-              !record.isActive ? "row-disabled-element" : "row-active-element"
-            }
-          />
-        </div>
-      </TableTabsStyled>
+
+      <div className="space-y-4">
+        <SearchBar
+          placeholder="Buscar usuarios"
+          value={search}
+          onChange={handleSearch}
+        />
+
+        {loading ? (
+          <div className="space-y-2">
+            {[...Array(5)].map((_, i) => (
+              <Skeleton key={i} className="h-12 w-full rounded" />
+            ))}
+          </div>
+        ) : (
+          <>
+            <div className="rounded-md border border-border">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/50">
+                    <th className="h-10 px-4 text-left font-medium text-muted-foreground">Nombre completo</th>
+                    <th className="h-10 px-4 text-left font-medium text-muted-foreground">Correo electrónico</th>
+                    <th className="h-10 px-4 text-left font-medium text-muted-foreground">Perfil</th>
+                    <th className="h-10 px-4 text-left font-medium text-muted-foreground">Estado</th>
+                    <th className="h-10 px-4 text-left font-medium text-muted-foreground">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
+                        No se encontraron usuarios
+                      </td>
+                    </tr>
+                  ) : (
+                    users.map((item) => (
+                      <tr
+                        key={item.id}
+                        className={cn(
+                          "border-b border-border transition-colors hover:bg-muted/50 last:border-0",
+                          !item.isActive && "opacity-60"
+                        )}
+                      >
+                        <td className="px-4 py-3 font-medium">
+                          {item.firstName} {item.lastName}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">{item.email}</td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center rounded-full bg-secondary px-2 py-0.5 text-xs font-medium">
+                            {(item.role as RoleInterface)?.name || "Sin perfil"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span
+                            className={cn(
+                              "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
+                              item.isActive
+                                ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                                : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                            )}
+                          >
+                            {item.isActive ? "Activo" : "Inactivo"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {getRowActions(item).map((action, idx) => (
+                                <DropdownMenuItem
+                                  key={idx}
+                                  onClick={action.onClick}
+                                  className={cn(
+                                    action.destructive &&
+                                      "text-destructive focus:text-destructive"
+                                  )}
+                                >
+                                  {action.icon}
+                                  {action.label}
+                                </DropdownMenuItem>
+                              ))}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 py-4">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => changePage(Math.max(1, page - 1))}
+                  disabled={page === 1}
+                >
+                  ← Prev
+                </Button>
+                <span className="text-sm text-muted-foreground px-2">
+                  {page} / {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => changePage(Math.min(totalPages, page + 1))}
+                  disabled={page === totalPages}
+                >
+                  Next →
+                </Button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </>
   );
 };

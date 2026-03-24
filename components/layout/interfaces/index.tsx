@@ -20,7 +20,7 @@ export interface RoleInterface {
 
 export interface UserInterface {
   id?: number;
-  rut: string;
+  rut?: string;
   dv?: number;
   firstName: string;
   lastName: string;

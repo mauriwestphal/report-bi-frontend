@@ -1,62 +1,33 @@
-import { Layout, Badge, Space } from "antd";
 import React, { useEffect, useState } from "react";
-import { HeaderStyled } from "./styled";
 import { lastUpdate } from "../../../services/Dashboard";
-const { Header: AntdHeader } = Layout;
 
-const HeaderDashboard = () => {
-  const [getUpdate, setUpdate] = useState();
-  const getLastUpdate = (): void => {
-    try {
-      lastUpdate().then(({ data }) => {
-        setUpdate(data[0].SYNCSTARTDATETIME);
-      })
-    } catch (error) {
-
-    }
-  }
+export default function HeaderDashboard() {
+  const [lastUpdateTime, setLastUpdateTime] = useState<string | undefined>();
 
   useEffect(() => {
-    getLastUpdate();
-  }, [])
+    lastUpdate()
+      .then(({ data }: any) => {
+        setLastUpdateTime(data?.[0]?.SYNCSTARTDATETIME);
+      })
+      .catch(() => {});
+  }, []);
 
   return (
-    <HeaderStyled>
-      <AntdHeader>
-        <div className="header_container__content">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="flex h-14 items-center px-6">
+        <span className="text-lg font-bold tracking-tight pr-4 mr-4 border-r border-border select-none">
+          Bi<span className="text-primary">Pro</span>
+        </span>
+        <span className="text-sm font-medium">Dashboard 360</span>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '1.4rem', fontWeight: 700, letterSpacing: '-0.5px', color: '#fff', borderRight: '1px solid white', paddingRight: '10px' }}>
-              Bi<span style={{ color: '#3b82f6' }}>Pro</span>
-            </span>
-            <span>Dashboard 360</span>
-          </div>
-
-          {/* MENU CRUD */}
-          <div style={{
-            textAlign: 'center'
-          }}>
-            <span style={{
-              backgroundColor: 'rgba(255, 102, 0, 0.2)',
-              border: '1px solid #FF6600',
-              paddingTop: '10px',
-              paddingBottom: '10px',
-              paddingRight: '40px',
-              paddingLeft: '40px',
-              borderRadius: 10,
-              textAlign: 'center',
-            }}>
-              {`Última actualización ${getUpdate} hrs`}
+        {lastUpdateTime && (
+          <div className="ml-auto">
+            <span className="text-xs text-muted-foreground bg-muted/50 px-4 py-2 rounded-md border border-border">
+              {`Última actualización ${lastUpdateTime} hrs`}
             </span>
           </div>
-
-          <div className="action-menu-container">
-
-          </div>
-        </div>
-      </AntdHeader>
-    </HeaderStyled>
+        )}
+      </div>
+    </header>
   );
-};
-
-export default HeaderDashboard;
+}

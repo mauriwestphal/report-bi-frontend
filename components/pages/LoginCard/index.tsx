@@ -1,39 +1,56 @@
-import { Button, Card } from "antd";
 import AuthService from "../../../services/AuthService";
-import { LoginCardStyle } from "./styled";
 import { useTranslations } from "next-intl";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../../ui/card";
+import { Button } from "../../ui/button";
+
+const MicrosoftIcon = ({ className }: { className?: string }) => (
+  <svg
+    className={className}
+    viewBox="0 0 21 21"
+    xmlns="http://www.w3.org/2000/svg"
+  >
+    <rect x="1" y="1" width="9" height="9" fill="#f25022" />
+    <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
+    <rect x="1" y="11" width="9" height="9" fill="#00a4ef" />
+    <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
+  </svg>
+);
 
 const LoginCard = () => {
   const t = useTranslations("auth");
 
-  const onLogin = () => {
+  const handleLogin = () => {
     AuthService.auth(window);
   };
+
   return (
-    <LoginCardStyle>
-      <div className="login-card-component">
-        <div className="corner-dot" />
-        <Card bordered={true}>
-          <div style={{ textAlign: "center", padding: '8px 0' }}>
-            <span style={{ fontSize: '2rem', fontWeight: 700, letterSpacing: '-0.5px' }}>
-              Bi<span style={{ color: '#3b82f6' }}>Pro</span>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+      <Card className="w-full max-w-sm mx-4">
+        <CardHeader className="text-center pb-4">
+          <div className="flex justify-center mb-4">
+            <span className="text-3xl font-bold tracking-tight">
+              Bi<span className="text-primary">Pro</span>
             </span>
           </div>
-          <div className="login-text">
-          <br />
-
-            <p>
-              <strong>{t("title")}</strong>
-            </p>
-            <br />
-            <p>{t("subtitle")}</p>
-          </div>
-          <Button type="primary" block onClick={onLogin} className="login-button">
+          <CardTitle className="text-xl">{t("title")}</CardTitle>
+          <CardDescription className="text-sm leading-relaxed">
+            {t("subtitle")}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button className="w-full" onClick={handleLogin}>
+            <MicrosoftIcon className="mr-2 h-4 w-4" />
             {t("button")}
           </Button>
-        </Card>
-      </div>
-    </LoginCardStyle>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 

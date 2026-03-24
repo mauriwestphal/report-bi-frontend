@@ -1,59 +1,47 @@
-import { Layout as AntdLayout } from "antd";
-import React, { CSSProperties, useEffect, useState } from "react";
-import Content from "./Content";
-import Header from "./Header";
-
-import { LayoutStyled } from "./style";
+import React, { CSSProperties, useEffect } from "react";
 import { useRouter } from "next/router";
 import { isTokenValid } from "../../utils/token";
 import { getToken } from "../../utils/auth";
+import Header from "./Header";
 import HeaderDashboard from "./Header-Dashboard";
 
-type ValidacionTitle = {
-  undefined: boolean,
-  true: boolean,
-  false: boolean
-}
+const activeHeaderMap: Record<string, boolean> = {
+  undefined: true,
+  true: true,
+  false: false,
+};
+
 const Layout = ({
   children,
   style,
-  title 
+  title,
 }: {
   children: React.ReactNode;
   style?: CSSProperties;
-  title?: any
+  title?: any;
 }) => {
   const router = useRouter();
-  const activeTitle: any  = {
-    undefined: true,
-    true: true, 
-    false: false
-  }
 
   useEffect(() => {
-    if (process.env.NEXT_PUBLIC_MOCK_AUTH === 'true') return;
+    if (process.env.NEXT_PUBLIC_MOCK_AUTH === "true") return;
     const token = getToken();
     if (token && !isTokenValid(token)) {
       router.push({ pathname: "/auth", query: { expired: true } });
     }
   }, []);
 
-  const validateHeader = (active:string) => {
-    if(activeTitle[active]){
-      return router.pathname === "/dashboard" ? <HeaderDashboard /> : <Header />;
-    } else {
-      return 
-    }
+  const renderHeader = () => {
+    if (!activeHeaderMap[String(title)]) return null;
+    return router.pathname === "/dashboard" ? <HeaderDashboard /> : <Header />;
   };
+
   return (
-    <LayoutStyled>
-      <AntdLayout
-        className={router.pathname === "/home" ? "layout-home" : "layout"}
-      >
-        {validateHeader(title)}
-        <Content style={style}>{children}</Content>
-      </AntdLayout>
-    </LayoutStyled>
+    <div className="min-h-screen bg-background text-foreground">
+      {renderHeader()}
+      <main className="px-6 py-6" style={style}>
+        {children}
+      </main>
+    </div>
   );
 };
 

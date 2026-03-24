@@ -1,72 +1,64 @@
-import { Avatar, Dropdown, Layout, Menu } from "antd";
-import React, { useEffect, useState } from "react";
-import type { MenuProps } from "antd";
-import { HeaderStyled } from "./styled";
+import Link from "next/link";
 import { useRouter } from "next/router";
-import { removeToken } from "../../../utils/auth";
-import { useAppContext } from "../../../context/AppContext";
-import { PERMISSION_TYPE } from "../../../shared/enum/permission.enum";
+import { Button } from "../../ui/button";
 import { ThemeToggle } from "../../shared/ThemeToggle";
 import { LanguageToggle } from "../../shared/LanguageToggle";
+import { useAppContext } from "../../../context/AppContext";
+import { PERMISSION_TYPE } from "../../../shared/enum/permission.enum";
 import { useTranslations } from "next-intl";
+import { removeToken } from "../../../utils/auth";
 
-const { Header: AntdHeader } = Layout;
+const navItemConfig = [
+  {
+    labelKey: "reports",
+    href: "/report",
+    permissions: undefined as PERMISSION_TYPE[] | undefined,
+    position: 1,
+  },
+  {
+    labelKey: "monitors",
+    href: "/monitor",
+    permissions: [
+      PERMISSION_TYPE.CAN_CREATE_MONITOR,
+      PERMISSION_TYPE.CAN_EDIT_MONITOR,
+      PERMISSION_TYPE.CAN_DELETE_MONITOR,
+      PERMISSION_TYPE.CAN_GENERATE_NEW_URL,
+      PERMISSION_TYPE.CAN_ENABLE_MONITOR,
+    ] as PERMISSION_TYPE[],
+    position: 2,
+  },
+  {
+    labelKey: "usersRoles",
+    href: "/user-role",
+    permissions: [
+      PERMISSION_TYPE.CAN_CREATE_ROLE,
+      PERMISSION_TYPE.CAN_CREATE_USER,
+      PERMISSION_TYPE.CAN_DELETE_ROLE,
+      PERMISSION_TYPE.CAN_EDIT_ROLE,
+      PERMISSION_TYPE.CAN_EDIT_USER,
+      PERMISSION_TYPE.CAN_ENABLE_USER,
+    ] as PERMISSION_TYPE[],
+    position: 3,
+  },
+];
 
-const Header = () => {
+export default function Header() {
   const { user } = useAppContext();
   const router = useRouter();
   const t = useTranslations("nav");
-  const [activeKey, setActiveKey] = useState("inicio");
-  const items: any[] = [
-    // {
-    //   label: "Inicio",
-    //   key: "/home",
-    //   position: 1
-    // },
-    // {
-    //   label: "Dashboard 360",
-    //   key: "/dashboard-usuarios",
-    //   position: 2
-    // },
-    {
-      label: t("monitors"),
-      key: "/monitor",
-      permissions: [
-        PERMISSION_TYPE.CAN_CREATE_MONITOR,
-        PERMISSION_TYPE.CAN_EDIT_MONITOR,
-        PERMISSION_TYPE.CAN_DELETE_MONITOR,
-        PERMISSION_TYPE.CAN_GENERATE_NEW_URL,
-        PERMISSION_TYPE.CAN_ENABLE_MONITOR,
-      ],
-      position: 2
-    },
-    {
-      label: t("usersRoles"),
-      key: "/user-role",
-      permissions: [
-        PERMISSION_TYPE.CAN_CREATE_ROLE,
-        PERMISSION_TYPE.CAN_CREATE_USER,
-        PERMISSION_TYPE.CAN_DELETE_ROLE,
-        PERMISSION_TYPE.CAN_EDIT_ROLE,
-        PERMISSION_TYPE.CAN_EDIT_USER,
-        PERMISSION_TYPE.CAN_ENABLE_USER,
-      ],
-      position: 3
-    },
-    {
-      label: t("reports"),
-      key: "/report",
-      position: 1
-    },
-  ];
 
-  useEffect(() => {
-    setActiveKey(router.pathname);
-  }, [router.pathname]);
-
-  const handleChangeMenu: MenuProps["onClick"] = (e) => {
-    setActiveKey(e.key);
-    router.push(e.key);
+  const getValidatedItems = () => {
+    const result: typeof navItemConfig = [];
+    for (const item of navItemConfig) {
+      if (!item.permissions) {
+        result.push(item);
+        continue;
+      }
+      if (user && item.permissions.some((p) => user.activePermissions.includes(p))) {
+        result.push(item);
+      }
+    }
+    return result.sort((a, b) => a.position - b.position);
   };
 
   const handleCloseSession = () => {
@@ -74,84 +66,49 @@ const Header = () => {
     router.push("/auth");
   };
 
-  const getItems = () => {
-    let toShowItems: Array<{label: string, key: string, position: number}> = items.filter(
-      (item) => !item.permissions
-    );
-
-    for (const item of items.filter((item) => item.permissions)) {
-      let hasPermission = false;
-      if (item.permissions && item.permissions.length && user) {
-        hasPermission = item.permissions.some((permission: PERMISSION_TYPE) =>
-          user.activePermissions.includes(permission)
-        );
-      }
-      if (hasPermission) {
-        toShowItems.push({ label: item.label, key: item.key, position: item.position });
-        toShowItems.sort((a,b) => a.position - b.position);
-      }
-    }
-
-    return toShowItems;
-  };
+  const navItems = getValidatedItems();
+  const initials = `${user?.firstName?.[0] ?? ""}${user?.lastName?.[0] ?? ""}`.toUpperCase();
 
   return (
-    <HeaderStyled>
-      <AntdHeader>
-        <div className="header_container__content">
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <span style={{ fontSize: '1.4rem', fontWeight: 700, letterSpacing: '-0.5px', color: '#fff' }}>
-              Bi<span style={{ color: '#3b82f6' }}>Pro</span>
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="flex h-14 items-center px-6">
+        {/* Logo */}
+        <span className="text-lg font-bold tracking-tight mr-8 select-none">
+          Bi<span className="text-primary">Pro</span>
+        </span>
+
+        {/* Nav — RBAC filtered */}
+        <nav className="flex items-center gap-1 flex-1">
+          {navItems.map((item) => (
+            <Link key={item.href} href={item.href}>
+              <Button
+                variant={router.pathname.startsWith(item.href) ? "secondary" : "ghost"}
+                size="sm"
+              >
+                {t(item.labelKey as any)}
+              </Button>
+            </Link>
+          ))}
+        </nav>
+
+        {/* Right: LanguageToggle + ThemeToggle + Avatar */}
+        <div className="flex items-center gap-2">
+          <LanguageToggle />
+          <ThemeToggle />
+          <div
+            className="flex items-center gap-2 ml-2 cursor-pointer group"
+            onClick={handleCloseSession}
+            title="Cerrar sesión"
+          >
+            <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground text-sm font-medium group-hover:opacity-80 transition-opacity">
+              {initials}
+            </div>
+            <span className="text-sm text-muted-foreground hidden sm:block">
+              {user?.firstName}
             </span>
           </div>
-
-        
-          {/* MENU CRUD */}
-          <div>
-            <Menu
-              className="route-menu"
-              mode="horizontal"
-              items={getItems()}
-              theme="dark"
-              activeKey={activeKey}
-              onClick={handleChangeMenu}
-              style={{
-                minWidth: "600px",
-              }}
-            />
-          </div>
-          
-          <div className="action-menu-container" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <LanguageToggle />
-            <ThemeToggle />
-            <Dropdown
-              trigger={["hover"]}
-              placement="bottom"
-              menu={{
-                items: [
-                  {
-                    key: "close-session",
-                    theme: "dark",
-                    label: "Cerrar sesión",
-                    onClick: () => handleCloseSession(),
-                  },
-                ],
-              }}
-              className="menu-user-options"
-              overlayClassName="menu-user-options__body_black"
-            >
-              <div>
-                <Avatar style={{ backgroundColor: "#f56a00" }}>
-                  {(user?.firstName || "").charAt(0)}
-                </Avatar>{" "}
-                {user?.firstName}
-              </div>
-            </Dropdown>
-          </div>
         </div>
-      </AntdHeader>
-    </HeaderStyled>
+      </div>
+    </header>
   );
-};
-
-export default Header;
+}

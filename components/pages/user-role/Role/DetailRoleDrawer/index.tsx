@@ -1,23 +1,17 @@
-import { CloseOutlined } from "@ant-design/icons";
-import { Badge, Button, Card, Col, Drawer, Row, Skeleton } from "antd";
 import { useEffect, useState } from "react";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "../../../../ui/sheet";
+import { ScrollArea } from "../../../../ui/scroll-area";
+import { Skeleton } from "../../../../ui/skeleton";
+import { Button } from "../../../../ui/button";
+import { cn } from "@/lib/utils";
 import RoleService from "../../../../../services/RoleService";
 import { IPermission, IReportPage, RoleInterface } from "../../../../layout/interfaces";
-import { DetailRoleDrawerBodyStyle, DetailRoleDrawerStyled } from "./style";
-
-const closeDrawerButton = (onClick: () => void) => (
-  <Button
-    type="default"
-    icon={<CloseOutlined />}
-    onClick={onClick}
-    className="round-icon-button"
-  />
-);
-
-interface IDetailRoleDrawerProps {
-  id: number;
-  onClose: () => void;
-}
 
 interface IPermissionGroup {
   groupName: string;
@@ -31,122 +25,110 @@ const groupPermissions = (permissions: IPermission[]): IPermissionGroup[] => {
     if (!map[group]) map[group] = [];
     map[group].push(p);
   });
-  return Object.entries(map).map(([groupName, perms]) => ({
-    groupName,
-    permissions: perms,
-  }));
+  return Object.entries(map).map(([groupName, perms]) => ({ groupName, permissions: perms }));
 };
+
+interface IDetailRoleDrawerProps {
+  id: number | null;
+  onClose: () => void;
+}
 
 const DetailRoleDrawer = ({ id, onClose }: IDetailRoleDrawerProps) => {
   const [role, setRole] = useState<RoleInterface | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    return () => {
+    if (!id) {
       setRole(null);
-      setLoading(false);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!id) return;
+      return;
+    }
     setLoading(true);
     RoleService.findOne(id)
       .then(({ data }) => setRole(data))
       .finally(() => setLoading(false));
   }, [id]);
 
-  const permissionGroups = role?.permissions
-    ? groupPermissions(role.permissions)
-    : [];
+  const permissionGroups = role?.permissions ? groupPermissions(role.permissions) : [];
 
   return (
-    <DetailRoleDrawerStyled>
-      <Drawer
-        title="Detalle de rol"
-        placement="right"
-        onClose={onClose}
-        open={!!id}
-        extra={closeDrawerButton(onClose)}
-        closable={false}
-        rootClassName="detail-role-drawer"
-      >
-        <DetailRoleDrawerBodyStyle>
-          <div className="detail-role-drawer__body">
-            <div className="role-name-container">
-              <p className="role-name">Rol</p>
-              <Skeleton loading={loading} active paragraph={{ rows: 1 }}>
-                <p className="role-description">{role?.name}</p>
-                <Badge
-                  color={role?.isActive ? "#79BB61" : "#DF545C"}
-                  text={role?.isActive ? "Activo" : "Inactivo"}
-                />
-              </Skeleton>
-            </div>
+    <Sheet open={!!id} onOpenChange={(open) => !open && onClose()}>
+      <SheetContent side="right" className="w-[400px] sm:w-[540px] flex flex-col">
+        <SheetHeader>
+          <SheetTitle>{loading ? "Cargando..." : role?.name ?? "Detalle de rol"}</SheetTitle>
+          {role && (
+            <SheetDescription>
+              <span
+                className={cn(
+                  "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium",
+                  role.isActive
+                    ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                    : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                )}
+              >
+                {role.isActive ? "Activo" : "Inactivo"}
+              </span>
+            </SheetDescription>
+          )}
+        </SheetHeader>
 
-            <div className="user-count-container">
-              <p>Permisos asignados</p>
+        <ScrollArea className="flex-1 mt-4 pr-2">
+          {loading ? (
+            <div className="space-y-3">
+              {[...Array(4)].map((_, i) => (
+                <Skeleton key={i} className="h-8 w-full" />
+              ))}
             </div>
+          ) : (
+            <div className="space-y-4">
+              <p className="text-sm font-medium text-muted-foreground">Permisos asignados</p>
 
-            <Skeleton loading={loading} active paragraph={{ rows: 4 }}>
-              {permissionGroups.length > 0 ? (
+              {permissionGroups.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Sin permisos asignados.</p>
+              ) : (
                 permissionGroups.map((group) => (
-                  <Card
+                  <div
                     key={group.groupName}
-                    bordered={false}
-                    style={{ marginBottom: 12 }}
+                    className="rounded-md border border-border p-3"
                   >
-                    <p
-                      style={{
-                        fontWeight: 700,
-                        marginBottom: 8,
-                        textTransform: "capitalize",
-                      }}
-                    >
-                      {group.groupName}
-                    </p>
-                    <ul>
+                    <p className="font-semibold text-sm mb-2 capitalize">{group.groupName}</p>
+                    <ul className="space-y-1">
                       {group.permissions.map((perm) => (
-                        <li key={perm.id} style={{ marginBottom: 6 }}>
-                          {perm.name}
+                        <li key={perm.id} className="text-sm text-muted-foreground">
+                          • {perm.name}
                         </li>
                       ))}
                     </ul>
-                  </Card>
+                  </div>
                 ))
-              ) : (
-                <p style={{ color: "#888" }}>Sin permisos asignados.</p>
               )}
-            </Skeleton>
 
-            {role?.reportPages && role.reportPages.length > 0 && (
-              <>
-                <div className="user-count-container" style={{ marginTop: 16 }}>
-                  <p>Páginas de reporte</p>
-                </div>
-                <Skeleton loading={loading} active paragraph={{ rows: 2 }}>
-                  <Card bordered={false}>
-                    <ul>
+              {role?.reportPages && role.reportPages.length > 0 && (
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-2">
+                    Páginas de reporte
+                  </p>
+                  <div className="rounded-md border border-border p-3">
+                    <ul className="space-y-1">
                       {role.reportPages.map((rp: IReportPage) => (
-                        <li key={rp.value ?? rp.id}>{rp.label}</li>
+                        <li key={rp.value ?? rp.id} className="text-sm text-muted-foreground">
+                          • {rp.label}
+                        </li>
                       ))}
                     </ul>
-                  </Card>
-                </Skeleton>
-              </>
-            )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </ScrollArea>
 
-            <Row style={{ marginTop: "70px" }} justify="center">
-              <Col span={12}>
-                <Button type="primary" block onClick={onClose}>
-                  Cerrar
-                </Button>
-              </Col>
-            </Row>
-          </div>
-        </DetailRoleDrawerBodyStyle>
-      </Drawer>
-    </DetailRoleDrawerStyled>
+        <div className="pt-4 border-t border-border">
+          <Button onClick={onClose} className="w-full">
+            Cerrar
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 };
 

@@ -1,21 +1,39 @@
-import Layout from "../../../../components/layout";
-import RoleForm from "../../../../components/pages/user-role/Role/RoleForm";
-import TopTitle from "../../../../components/shared/TopTitle";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Loader2 } from "lucide-react";
+import Layout from "../../../../components/layout";
+import RoleForm, { RoleFormValues } from "../../../../components/pages/user-role/Role/RoleForm";
+import { PageHeader } from "../../../../components/shared/PageHeader";
+import { Button } from "../../../../components/ui/button";
+import { notify } from "../../../../utils/toast";
 import RoleService from "../../../../services/RoleService";
-import { Button, Card, Col, Form, Row } from "antd";
-import { useNotification } from "../../../../components/shared/Notifications";
+
+const roleSchema = z.object({
+  name: z.string().min(1, "Campo requerido"),
+  keyName: z.string().min(1, "Campo requerido"),
+  isActive: z.boolean().optional(),
+  permissions: z.array(z.number()).optional(),
+  report: z.array(z.number()).optional(),
+  reportPages: z.array(z.number()).optional(),
+});
 
 export default function CreateRolePage() {
-  const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const { openNotification, contextHolder } = useNotification();
+
+  const form = useForm<RoleFormValues>({
+    resolver: zodResolver(roleSchema),
+    defaultValues: { isActive: true, permissions: [], report: [], reportPages: [] },
+  });
 
   const onFinish = async () => {
+    const valid = await form.trigger(["name", "keyName"]);
+    if (!valid) return;
+
     try {
       setLoading(true);
-      const values = await form.validateFields();
-
+      const values = form.getValues();
       await RoleService.create({
         name: values.name,
         keyName: values.keyName,
@@ -23,55 +41,41 @@ export default function CreateRolePage() {
         permissionIds: values.permissions || [],
         reportPageIds: values.reportPages || [],
       });
-
-      openNotification("success", "Se creó el rol de manera correcta.");
-      form.resetFields();
+      notify.success("Se creó el rol de manera correcta.");
+      form.reset({ isActive: true, permissions: [], report: [], reportPages: [] });
     } catch (err: any) {
-      if (err?.message) {
-        openNotification("error", err.message);
-      }
+      notify.error(err?.message || "Error al crear el rol");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <>
-      {contextHolder}
-      <Layout>
-        <TopTitle
-          comeBackConfig={{
-            route: "/user-role?active=role",
-            show: true,
-            text: "Volver a Roles",
-          }}
-          title={{ title: "Gestión de Roles / Crear nuevo rol" }}
+    <Layout>
+      <div className="max-w-2xl space-y-6">
+        <PageHeader
+          title="Crear nuevo rol"
+          showBack
+          backRoute="/user-role?active=role"
         />
 
-        <Row gutter={24} className="create-role__container" justify="center">
-          <Col span={12}>
-            <Card bordered={false} style={{ padding: "16px" }}>
-              <RoleForm form={form} />
-              <Row
-                gutter={24}
-                className="create-role__container"
-                justify="center"
-                style={{ marginTop: 126 }}
-              >
-                <Button
-                  type="primary"
-                  block
-                  style={{ width: "50%" }}
-                  onClick={onFinish}
-                  loading={loading}
-                >
-                  <span style={{ color: "#fff" }}>Crear nuevo rol</span>
-                </Button>
-              </Row>
-            </Card>
-          </Col>
-        </Row>
-      </Layout>
-    </>
+        <div className="rounded-lg border border-border bg-card p-6">
+          <RoleForm form={form} />
+
+          <div className="flex gap-3 pt-6 mt-4 border-t border-border">
+            <Button
+              variant="outline"
+              onClick={() => form.reset({ isActive: true, permissions: [], report: [], reportPages: [] })}
+            >
+              Limpiar
+            </Button>
+            <Button onClick={onFinish} disabled={loading}>
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Crear nuevo rol
+            </Button>
+          </div>
+        </div>
+      </div>
+    </Layout>
   );
 }

@@ -1,109 +1,114 @@
-import {
-  Col,
-  Form,
-  FormInstance,
-  Input,
-  Row,
-  Select,
-  Switch,
-} from "antd";
 import { useEffect, useState } from "react";
+import { UseFormReturn } from "react-hook-form";
+import { Label } from "../../../../ui/label";
+import { Input } from "../../../../ui/input";
+import { Switch } from "../../../../ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../../../ui/select";
+import { Skeleton } from "../../../../ui/skeleton";
 import RoleService from "../../../../../services/RoleService";
 import RoleInterface from "../../../../../shared/interfaces/Role.interface";
 
-interface UserFormProps {
-  form: FormInstance<any>;
+export interface UserFormValues {
+  firstName: string;
+  lastName: string;
+  email: string;
+  isActive?: boolean;
+  roleId?: number;
 }
 
-interface Roles {
-  data: RoleInterface[];
-  loading: boolean;
+interface UserFormProps {
+  form: UseFormReturn<UserFormValues, any, any>;
 }
 
 const UserForm = ({ form }: UserFormProps) => {
-  const [roles, setRoles] = useState<Roles>({ loading: false, data: [] });
+  const [roles, setRoles] = useState<RoleInterface[]>([]);
+  const [rolesLoading, setRolesLoading] = useState(false);
+
+  const { register, watch, setValue, formState: { errors } } = form;
 
   useEffect(() => {
-    setRoles({ loading: true, data: [] });
-    RoleService.list({}).then(({ data }) => {
-      setRoles({ data: data as RoleInterface[], loading: false });
-    });
+    setRolesLoading(true);
+    RoleService.list({})
+      .then(({ data }) => setRoles(data as RoleInterface[]))
+      .finally(() => setRolesLoading(false));
   }, []);
 
   return (
-    <Form form={form} layout="vertical">
-      <div style={{ marginBottom: 29, marginTop: 15 }}>
-        <strong>Información del usuario</strong>
+    <div className="space-y-6">
+      <p className="font-semibold text-sm">Información del usuario</p>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* firstName */}
+        <div className="space-y-1.5">
+          <Label htmlFor="firstName">Nombre</Label>
+          <Input id="firstName" {...register("firstName")} />
+          {errors.firstName && (
+            <p className="text-xs text-destructive">{errors.firstName.message}</p>
+          )}
+        </div>
+
+        {/* lastName */}
+        <div className="space-y-1.5">
+          <Label htmlFor="lastName">Apellido</Label>
+          <Input id="lastName" {...register("lastName")} />
+          {errors.lastName && (
+            <p className="text-xs text-destructive">{errors.lastName.message}</p>
+          )}
+        </div>
+
+        {/* email */}
+        <div className="space-y-1.5">
+          <Label htmlFor="email">Correo electrónico</Label>
+          <Input id="email" type="email" {...register("email")} />
+          {errors.email && (
+            <p className="text-xs text-destructive">{errors.email.message}</p>
+          )}
+        </div>
+
+        {/* isActive */}
+        <div className="flex items-center gap-3">
+          <Switch
+            checked={watch("isActive")}
+            onCheckedChange={(v) => setValue("isActive", v)}
+          />
+          <Label>Estado: {watch("isActive") ? "Activo" : "Inactivo"}</Label>
+        </div>
       </div>
 
-      <Row gutter={40}>
-        <Col span={0}>
-          <Form.Item name="id" />
-        </Col>
+      <p className="font-semibold text-sm mt-4">Asignación de perfil</p>
 
-        <Col span={12}>
-          <Form.Item
-            name="firstName"
-            label="Nombre"
-            rules={[{ required: true, message: "El nombre es obligatorio" }]}
+      <div className="space-y-1.5">
+        <Label>Perfil</Label>
+        {rolesLoading ? (
+          <Skeleton className="h-10 w-full" />
+        ) : (
+          <Select
+            value={watch("roleId") ? String(watch("roleId")) : ""}
+            onValueChange={(v) => setValue("roleId", Number(v))}
           >
-            <Input />
-          </Form.Item>
-        </Col>
-
-        <Col span={12}>
-          <Form.Item
-            name="lastName"
-            label="Apellido"
-            rules={[{ required: true, message: "El apellido es obligatorio" }]}
-          >
-            <Input />
-          </Form.Item>
-        </Col>
-
-        <Col span={12}>
-          <Form.Item
-            name="email"
-            label="Correo electrónico"
-            rules={[
-              { required: true, message: "El email es obligatorio" },
-              { type: "email", message: "Ingresa un email válido" },
-            ]}
-          >
-            <Input />
-          </Form.Item>
-        </Col>
-
-        <Col span={12}>
-          <Form.Item name="isActive" valuePropName="checked" label="Estado">
-            <Switch unCheckedChildren="Inactivo" checkedChildren="Activo" />
-          </Form.Item>
-        </Col>
-      </Row>
-
-      <div style={{ marginBottom: 41, marginTop: 40 }}>
-        <strong>Asignación de perfil</strong>
+            <SelectTrigger>
+              <SelectValue placeholder="Seleccionar perfil" />
+            </SelectTrigger>
+            <SelectContent>
+              {roles.map((role) => (
+                <SelectItem key={role.id} value={String(role.id)}>
+                  {role.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        {errors.roleId && (
+          <p className="text-xs text-destructive">{errors.roleId.message}</p>
+        )}
       </div>
-
-      <Row gutter={40}>
-        <Col span={24}>
-          <Form.Item
-            name="roleId"
-            label="Perfil"
-            rules={[{ required: true, message: "El perfil es obligatorio" }]}
-          >
-            <Select
-              placeholder="Seleccionar"
-              loading={roles.loading}
-              options={roles.data.map((role) => ({
-                label: role.name,
-                value: role.id,
-              }))}
-            />
-          </Form.Item>
-        </Col>
-      </Row>
-    </Form>
+    </div>
   );
 };
 

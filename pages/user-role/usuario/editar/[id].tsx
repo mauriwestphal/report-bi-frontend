@@ -1,40 +1,60 @@
-import { Button, Card, Col, Form, message, Row, Spin } from "antd";
-import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Loader2 } from "lucide-react";
+import { useRouter } from "next/router";
 import Layout from "../../../../components/layout";
-import UserForm from "../../../../components/pages/user-role/User/UserForm";
-import TopTitle from "../../../../components/shared/TopTitle";
+import UserForm, { UserFormValues } from "../../../../components/pages/user-role/User/UserForm";
+import { PageHeader } from "../../../../components/shared/PageHeader";
+import { Button } from "../../../../components/ui/button";
+import { Skeleton } from "../../../../components/ui/skeleton";
+import { notify } from "../../../../utils/toast";
 import UserService from "../../../../services/UserService/services";
 
+const userSchema = z.object({
+  firstName: z.string().min(1, "El nombre es obligatorio"),
+  lastName: z.string().min(1, "El apellido es obligatorio"),
+  email: z.string().email("Ingresa un email válido"),
+  isActive: z.boolean().optional(),
+  roleId: z.number().optional(),
+});
+
 const UpdateUserPage = () => {
-  const [form] = Form.useForm();
-  const userId = Form.useWatch("id", form);
   const { query } = useRouter();
   const [loading, setLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [userId, setUserId] = useState<number | null>(null);
+
+  const form = useForm<UserFormValues>({
+    resolver: zodResolver(userSchema),
+    defaultValues: { isActive: true },
+  });
 
   useEffect(() => {
-    if (query.id) {
-      setLoading(true);
-      UserService.get(Number(query.id))
-        .then(({ data }) => {
-          form.setFieldsValue({
-            id: data.id,
-            firstName: data.firstName,
-            lastName: data.lastName,
-            email: data.email,
-            isActive: data.isActive,
-            roleId: data.role?.id,
-          });
-        })
-        .finally(() => setLoading(false));
-    }
-  }, [query]);
+    if (!query.id) return;
+    setInitialLoading(true);
+    UserService.get(Number(query.id))
+      .then(({ data }) => {
+        setUserId(data.id!);
+        form.reset({
+          firstName: data.firstName,
+          lastName: data.lastName,
+          email: data.email,
+          isActive: data.isActive,
+          roleId: data.role?.id,
+        });
+      })
+      .finally(() => setInitialLoading(false));
+  }, [query.id]);
 
   const onFinish = async () => {
-    const values = await form.validateFields();
+    const valid = await form.trigger();
+    if (!valid) return;
 
+    const values = form.getValues();
     const payload = {
-      id: values.id,
+      id: userId!,
       firstName: values.firstName,
       lastName: values.lastName,
       email: values.email,
@@ -44,16 +64,12 @@ const UpdateUserPage = () => {
 
     setLoading(true);
     UserService.update(payload)
-      .then(() => {
-        message.success("Usuario editado correctamente");
-      })
+      .then(() => notify.success("Usuario editado correctamente"))
       .catch((reason: any) => {
         if (reason?.statusCode === 409 || reason?.status === 409) {
-          message.error(
-            "Ya existe un usuario con ese correo electrónico."
-          );
+          notify.error("Ya existe un usuario con ese correo electrónico.");
         } else {
-          message.error(reason?.message || "Error al editar el usuario");
+          notify.error(reason?.message || "Error al editar el usuario");
         }
       })
       .finally(() => setLoading(false));
@@ -61,42 +77,32 @@ const UpdateUserPage = () => {
 
   return (
     <Layout>
-      <TopTitle
-        comeBackConfig={{
-          route: "/user-role",
-          show: true,
-          text: "Volver a Usuarios",
-        }}
-        title={{
-          title: "Gestión de Usuarios / Editar usuario",
-        }}
-      />
+      <div className="max-w-2xl space-y-6">
+        <PageHeader
+          title="Editar usuario"
+          showBack
+          backRoute="/user-role"
+        />
 
-      <Row gutter={24} className="update-user__container" justify="center">
-        <Col span={12}>
-          <Spin spinning={loading}>
-            <Card bordered={false} style={{ padding: "16px" }}>
-              <UserForm form={form} />
-              <Row
-                gutter={24}
-                className="update-user__container"
-                justify="center"
-                style={{ marginTop: 40 }}
-              >
-                <Button
-                  type="primary"
-                  block
-                  style={{ width: "50%" }}
-                  onClick={onFinish}
-                  loading={loading}
-                >
-                  Editar usuario
-                </Button>
-              </Row>
-            </Card>
-          </Spin>
-        </Col>
-      </Row>
+        <div className="rounded-lg border border-border bg-card p-6">
+          {initialLoading ? (
+            <div className="space-y-4">
+              {[...Array(4)].map((_, i) => (
+                <Skeleton key={i} className="h-10 w-full" />
+              ))}
+            </div>
+          ) : (
+            <UserForm form={form} />
+          )}
+
+          <div className="flex gap-3 pt-6 mt-4 border-t border-border">
+            <Button onClick={onFinish} disabled={loading || initialLoading}>
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Editar usuario
+            </Button>
+          </div>
+        </div>
+      </div>
     </Layout>
   );
 };
