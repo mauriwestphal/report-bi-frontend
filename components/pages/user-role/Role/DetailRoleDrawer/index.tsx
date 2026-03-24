@@ -1,61 +1,69 @@
 import { CloseOutlined } from "@ant-design/icons";
-import { Button, Card, Col, Drawer, Row, Skeleton } from "antd";
+import { Badge, Button, Card, Col, Drawer, Row, Skeleton } from "antd";
 import { useEffect, useState } from "react";
 import RoleService from "../../../../../services/RoleService";
-import { UserInterface } from "../../../../layout/interfaces";
+import { IPermission, IReportPage, RoleInterface } from "../../../../layout/interfaces";
 import { DetailRoleDrawerBodyStyle, DetailRoleDrawerStyled } from "./style";
 
-const closeDrawerButton = (onClick: any) => {
-  return (
-    <Button
-      type="default"
-      icon={<CloseOutlined />}
-      onClick={onClick}
-      className="round-icon-button"
-    />
-  );
-};
+const closeDrawerButton = (onClick: () => void) => (
+  <Button
+    type="default"
+    icon={<CloseOutlined />}
+    onClick={onClick}
+    className="round-icon-button"
+  />
+);
 
 interface IDetailRoleDrawerProps {
   id: number;
   onClose: () => void;
 }
 
+interface IPermissionGroup {
+  groupName: string;
+  permissions: IPermission[];
+}
+
+const groupPermissions = (permissions: IPermission[]): IPermissionGroup[] => {
+  const map: Record<string, IPermission[]> = {};
+  permissions.forEach((p) => {
+    const group = p.groupName || "General";
+    if (!map[group]) map[group] = [];
+    map[group].push(p);
+  });
+  return Object.entries(map).map(([groupName, perms]) => ({
+    groupName,
+    permissions: perms,
+  }));
+};
+
 const DetailRoleDrawer = ({ id, onClose }: IDetailRoleDrawerProps) => {
-  const [users, setUsers] = useState<UserInterface[]>([]);
-  const [roleName, setRoleName] = useState("");
+  const [role, setRole] = useState<RoleInterface | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     return () => {
-      onClose();
-      setUsers([]);
+      setRole(null);
       setLoading(false);
     };
   }, []);
 
   useEffect(() => {
+    if (!id) return;
     setLoading(true);
-    if (id) {
-      RoleService.findOne(id)
-        .then(({ data }) => {
-          const { name, users } = data;
-          setRoleName(name);
-
-          if (users) {
-            setUsers(users);
-          }
-        })
-        .finally(() => {
-          setLoading(false);
-        });
-    }
+    RoleService.findOne(id)
+      .then(({ data }) => setRole(data))
+      .finally(() => setLoading(false));
   }, [id]);
+
+  const permissionGroups = role?.permissions
+    ? groupPermissions(role.permissions)
+    : [];
 
   return (
     <DetailRoleDrawerStyled>
       <Drawer
-        title={`Detalle`}
+        title="Detalle de rol"
         placement="right"
         onClose={onClose}
         open={!!id}
@@ -67,29 +75,70 @@ const DetailRoleDrawer = ({ id, onClose }: IDetailRoleDrawerProps) => {
           <div className="detail-role-drawer__body">
             <div className="role-name-container">
               <p className="role-name">Rol</p>
-              <Skeleton loading={loading}>
-                <p className="role-description">{roleName}</p>
+              <Skeleton loading={loading} active paragraph={{ rows: 1 }}>
+                <p className="role-description">{role?.name}</p>
+                <Badge
+                  color={role?.isActive ? "#79BB61" : "#DF545C"}
+                  text={role?.isActive ? "Activo" : "Inactivo"}
+                />
               </Skeleton>
             </div>
 
             <div className="user-count-container">
-              <p>Usuarios asociados al rol</p>
+              <p>Permisos asignados</p>
             </div>
-            <Skeleton loading={loading}>
-              <Card bordered={false}>
-                <ul>
-                  {users.map((user) => (
-                    <li
-                      key={user.id}
-                    >{`${user.firstName} ${user.lastName}`}</li>
-                  ))}
-                </ul>
-              </Card>
+
+            <Skeleton loading={loading} active paragraph={{ rows: 4 }}>
+              {permissionGroups.length > 0 ? (
+                permissionGroups.map((group) => (
+                  <Card
+                    key={group.groupName}
+                    bordered={false}
+                    style={{ marginBottom: 12 }}
+                  >
+                    <p
+                      style={{
+                        fontWeight: 700,
+                        marginBottom: 8,
+                        textTransform: "capitalize",
+                      }}
+                    >
+                      {group.groupName}
+                    </p>
+                    <ul>
+                      {group.permissions.map((perm) => (
+                        <li key={perm.id} style={{ marginBottom: 6 }}>
+                          {perm.name}
+                        </li>
+                      ))}
+                    </ul>
+                  </Card>
+                ))
+              ) : (
+                <p style={{ color: "#888" }}>Sin permisos asignados.</p>
+              )}
             </Skeleton>
+
+            {role?.reportPages && role.reportPages.length > 0 && (
+              <>
+                <div className="user-count-container" style={{ marginTop: 16 }}>
+                  <p>Páginas de reporte</p>
+                </div>
+                <Skeleton loading={loading} active paragraph={{ rows: 2 }}>
+                  <Card bordered={false}>
+                    <ul>
+                      {role.reportPages.map((rp: IReportPage) => (
+                        <li key={rp.value ?? rp.id}>{rp.label}</li>
+                      ))}
+                    </ul>
+                  </Card>
+                </Skeleton>
+              </>
+            )}
 
             <Row style={{ marginTop: "70px" }} justify="center">
               <Col span={12}>
-                <Button type="primary" block onClick={() => onClose()}>
+                <Button type="primary" block onClick={onClose}>
                   Cerrar
                 </Button>
               </Col>

@@ -1,13 +1,10 @@
 import { Button, Card, Col, Form, message, Row, Spin } from "antd";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
-import { format } from "rut.js";
 import Layout from "../../../../components/layout";
 import UserForm from "../../../../components/pages/user-role/User/UserForm";
 import TopTitle from "../../../../components/shared/TopTitle";
-import UserService, {
-  UserUpdateDto,
-} from "../../../../services/UserService/services";
+import UserService from "../../../../services/UserService/services";
 
 const UpdateUserPage = () => {
   const [form] = Form.useForm();
@@ -16,41 +13,57 @@ const UpdateUserPage = () => {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
     if (query.id) {
-      UserService.get(Number(query.id)).then(({ data }) => {
-
-        const { rut, dv } = data;
-        if (rut && dv) {
-          data.rut = format(`${rut}${dv}`);
-        }
-
-        form.setFieldsValue({          
-          ...data,
-        });
-      }).finally(() => setLoading(false));
+      setLoading(true);
+      UserService.get(Number(query.id))
+        .then(({ data }) => {
+          form.setFieldsValue({
+            id: data.id,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            email: data.email,
+            isActive: data.isActive,
+            roleId: data.role?.id,
+          });
+        })
+        .finally(() => setLoading(false));
     }
   }, [query]);
 
   const onFinish = async () => {
-    const values: UserUpdateDto = await form.validateFields();
+    const values = await form.validateFields();
+
+    const payload = {
+      id: values.id,
+      firstName: values.firstName,
+      lastName: values.lastName,
+      email: values.email,
+      roleId: values.roleId,
+      isActive: values.isActive,
+    };
+
     setLoading(true);
-    UserService.update(values)
+    UserService.update(payload)
       .then(() => {
         message.success("Usuario editado correctamente");
-        form.resetFields();
-        setLoading(false);
       })
-      .catch((reason) => {
-        message.error(reason.message);
+      .catch((reason: any) => {
+        if (reason?.statusCode === 409 || reason?.status === 409) {
+          message.error(
+            "Ya existe un usuario con ese correo electrónico."
+          );
+        } else {
+          message.error(reason?.message || "Error al editar el usuario");
+        }
       })
       .finally(() => setLoading(false));
   };
+
   return (
     <Layout>
       <TopTitle
         comeBackConfig={{
-          route: "/home",
+          route: "/user-role",
           show: true,
           text: "Volver a Usuarios",
         }}
@@ -59,12 +72,17 @@ const UpdateUserPage = () => {
         }}
       />
 
-      <Row gutter={24} className="update-user__container" justify={"center"}>
+      <Row gutter={24} className="update-user__container" justify="center">
         <Col span={12}>
           <Spin spinning={loading}>
             <Card bordered={false} style={{ padding: "16px" }}>
               <UserForm form={form} />
-              <Row gutter={24} className="update-user__container" justify={"center"}>
+              <Row
+                gutter={24}
+                className="update-user__container"
+                justify="center"
+                style={{ marginTop: 40 }}
+              >
                 <Button
                   type="primary"
                   block
@@ -72,11 +90,7 @@ const UpdateUserPage = () => {
                   onClick={onFinish}
                   loading={loading}
                 >
-                 <span style={{
-                    color: "#fff"
-                  }}> 
                   Editar usuario
-                  </span>
                 </Button>
               </Row>
             </Card>

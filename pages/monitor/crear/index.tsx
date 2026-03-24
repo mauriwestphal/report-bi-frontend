@@ -1,5 +1,5 @@
 import { WarningFilled } from "@ant-design/icons";
-import { Button, Card, Col, Form, message, Row, Space, notification } from "antd";
+import { Button, Card, Col, Form, Row, Space } from "antd";
 import { useEffect, useState } from "react";
 
 import Layout from "../../../components/layout";
@@ -8,66 +8,63 @@ import ActionMenuModal from "../../../components/shared/ActionMenuModal";
 import TopTitle from "../../../components/shared/TopTitle";
 import { useNotification } from "../../../components/shared/Notifications";
 import { v4 as uuidv4 } from "uuid";
-import ZoneService from "../../../services/ZoneService";
+import MonitorService from "../../../services/MonitorService/monitor";
 
 const CreateMonitorPage = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [isActiveSaveMonitor, setIsActiveSaveMonitor] = useState(false);
-  const { openNotification, contextHolder } = useNotification()
+  const { openNotification, contextHolder } = useNotification();
   const [uniqueId, setUniqueId] = useState(uuidv4());
-  const [activeElementModal, setActiveElementModal] = useState({
-    id: 0,
-    body: {
-      isActive: false,
-    },
-  });
 
   useEffect(() => {
-    form.setFieldsValue({ identifier: uniqueId });
+    form.setFieldsValue({ identifier: uniqueId, isActive: true });
   }, [uniqueId]);
 
   const onFinish = async () => {
     try {
       await form.validateFields();
-
       setIsActiveSaveMonitor(true);
-
-    } catch (error) {
-
+    } catch {
+      // validation errors are shown inline
     }
-
   };
 
-
   const onSaveMonitor = async () => {
-    form.setFields([
-      {name:'url', value:'none'}
-    ]);
     const values = await form.validateFields();
 
-    values.report_id = parseInt(values.report_id);
-    values.dashboardId = parseInt(values.dashboardId);
+    const payload = {
+      ...values,
+      report_id: values.report_id ? parseInt(values.report_id) : undefined,
+      dashboardId: values.dashboardId ? parseInt(values.dashboardId) : undefined,
+    };
 
-    // values.zones = 0;
     setLoading(true);
-    ZoneService.createZone(values)
+    MonitorService.createMonitor(payload)
       .then(() => {
-        openNotification('success', 'Se creo el monitor de manera correcta');
-      }).catch((reason) => {
-        openNotification('error', reason.message);
-      }).finally(() => {
-        setLoading(false);
+        openNotification("success", "Monitor creado correctamente");
         form.resetFields();
         setUniqueId(uuidv4());
         onCancelModal();
+      })
+      .catch((reason: any) => {
+        if (reason?.status === 409) {
+          openNotification(
+            "error",
+            "Ya existe un monitor con ese nombre, alias o URL. Por favor verifica los datos."
+          );
+        } else {
+          openNotification("error", reason?.message || "Error al crear el monitor");
+        }
+        onCancelModal();
+      })
+      .finally(() => {
+        setLoading(false);
       });
-
   };
 
   const onCancelModal = () => {
-    setActiveElementModal({ id: 0, body: { isActive: false } });
-    setIsActiveSaveMonitor(false)
+    setIsActiveSaveMonitor(false);
   };
 
   return (
@@ -75,65 +72,72 @@ const CreateMonitorPage = () => {
       {contextHolder}
       <ActionMenuModal
         open={isActiveSaveMonitor}
-        actionalId={activeElementModal.id}
+        actionalId={0}
         onConfirm={onSaveMonitor}
-        title={'Confirmar'}
+        title="Confirmar"
         onCancel={onCancelModal}
         width={"60%" as any}
         content={
-          <div className="space-align-container" style={{
-
-          }}>
+          <div className="space-align-container">
             <div className="space-align-block">
-              <Space align="center" style={{
-                display: 'flex',
-                width: '100%',
-                alignContent: 'center',
-                alignItems: 'center',
-                justifyContent: 'center'
-              }}>
-                <h2>Crear vinculo para nuevo monitor</h2>
+              <Space
+                align="center"
+                style={{
+                  display: "flex",
+                  width: "100%",
+                  alignContent: "center",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                <h2>Crear vínculo para nuevo monitor</h2>
               </Space>
-              <div style={{
-                marginTop: 20,
-                marginBottom: 20,
-                height: '10%',
-                width: '100%',
-                backgroundColor: '#57341d',
-                borderRadius: '5px',
-                padding: 5
-
-              }}>
+              <div
+                style={{
+                  marginTop: 20,
+                  marginBottom: 20,
+                  width: "100%",
+                  backgroundColor: "#57341d",
+                  borderRadius: "5px",
+                  padding: 5,
+                }}
+              >
                 <Row gutter={{ xs: 8, sm: 16, md: 24, lg: 32 }}>
-
-                  <Col className="gutter-row" span={6}>
-                    <div style={{
-                      width: '100%',
-                      height: '100%',
-                      display: 'flex',
-                      justifyContent: 'center', alignContent: 'center', alignItems: 'center'
-                    }}>
+                  <Col span={6}>
+                    <div
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        display: "flex",
+                        justifyContent: "center",
+                        alignItems: "center",
+                      }}
+                    >
                       <WarningFilled style={{ fontSize: 130 }} />
                     </div>
                   </Col>
-                  <Col className="gutter-row" span={18}>
-                    <div>
-                      <p>
-                        Está a punto de crear un código para insertar. Una vez publicado, cualquier persona en Internet con este vínculo podrá tener acceso al informe y a los datos de este. La información confidencial contenida en este monitor quedara expuesta a intenciones maliciosas.
-                        <br /> <br />
-                        Si sospecha que el vínculo está comprometido, puede regenerarlo desde el mantenedor de monitores.
-                      </p>
-                    </div>
+                  <Col span={18}>
+                    <p>
+                      Está a punto de crear un código para insertar. Una vez
+                      publicado, cualquier persona en Internet con este vínculo
+                      podrá tener acceso al informe y a los datos de este. La
+                      información confidencial contenida en este monitor quedará
+                      expuesta a intenciones maliciosas.
+                      <br />
+                      <br />
+                      Si sospecha que el vínculo está comprometido, puede
+                      regenerarlo desde el mantenedor de monitores.
+                    </p>
                   </Col>
                 </Row>
               </div>
-
-              <div>
-                <p>
-                  Antes de publicar este informe, asegúrese de que tiene el derecho para compartir los datos y las visualizaciones públicamente. No publique información confidencial o de propiedad, ni los datos personales de nadie. En caso de duda, revise las directivas de la organización antes de publicarlo.
-
-                </p>
-              </div>
+              <p>
+                Antes de publicar este informe, asegúrese de que tiene el
+                derecho para compartir los datos y las visualizaciones
+                públicamente. No publique información confidencial o de
+                propiedad, ni los datos personales de nadie. En caso de duda,
+                revise las directivas de la organización antes de publicarlo.
+              </p>
             </div>
           </div>
         }
@@ -142,7 +146,7 @@ const CreateMonitorPage = () => {
       <Layout>
         <TopTitle
           comeBackConfig={{
-            route: "/home",
+            route: "/monitor",
             show: true,
             text: "Volver a Monitor",
           }}
@@ -151,15 +155,18 @@ const CreateMonitorPage = () => {
           }}
         />
 
-        <Row gutter={24} className="create-user__container" justify={"center"}>
-          <Col span={12} style={{
-            justifyContent: 'center'
-          }}>
-            <Card bordered={false} style={{ padding: "16px", justifyContent: 'center', alignContent: 'center', alignItems: 'center' }}>
+        <Row gutter={24} className="create-user__container" justify="center">
+          <Col span={12}>
+            <Card
+              bordered={false}
+              style={{ padding: "16px" }}
+            >
               <MonitorForm form={form} />
-              <Row gutter={24} className="create-user__container" justify={"center"} style={{
-                marginTop: 100
-              }}>
+              <Row
+                gutter={24}
+                justify="center"
+                style={{ marginTop: 40 }}
+              >
                 <Button
                   type="primary"
                   block
@@ -175,7 +182,6 @@ const CreateMonitorPage = () => {
         </Row>
       </Layout>
     </>
-
   );
 };
 

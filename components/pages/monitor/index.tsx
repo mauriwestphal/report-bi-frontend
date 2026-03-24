@@ -1,108 +1,116 @@
-import { ColumnsType } from 'antd/es/table';
-import React, { useMemo, useState, useEffect } from 'react'
-import { MonitorInterfaceItem, UserInterface } from '../../layout/interfaces';
-import Table from '../../shared/Table';
-import { TableStyle } from '../../shared/Table/style';
-import { TableTabsStyled } from '../../shared/TableTabs/style';
-import TopSearch from '../../shared/TopSearch';
-import { MonitorInterface } from '../../layout/interfaces/index';
-import { ListMonitor } from '../../../services/interfaces/List.interface';
-import MonitorService from '../../../services/MonitorService/monitor';
-import { Badge, message, Input, Button } from 'antd';
-import { getValidatedItems } from '../../../utils/validatedItems';
-import ActionMenu from '../../shared/ActionMenu';
-import ActionMenuModal from '../../shared/ActionMenuModal';
-import { useAppContext } from '../../../context/AppContext';
-import { useRouter } from 'next/router';
-import { IncomingMessage } from 'http';
-import { CopyOutlined } from '@ant-design/icons';
-import { useNotification } from '../../shared/Notifications';
+import { ColumnsType } from "antd/es/table";
+import React, { useMemo, useState, useEffect } from "react";
+import { MonitorInterface } from "../../layout/interfaces";
+import Table from "../../shared/Table";
+import { TableTabsStyled } from "../../shared/TableTabs/style";
+import { MonitorInterfaceItem } from "../../layout/interfaces/index";
+import { ListMonitor } from "../../../services/interfaces/List.interface";
+import MonitorService from "../../../services/MonitorService/monitor";
+import { Badge, Input, Button } from "antd";
+import { getValidatedItems } from "../../../utils/validatedItems";
+import ActionMenu from "../../shared/ActionMenu";
+import ActionMenuModal from "../../shared/ActionMenuModal";
+import { useAppContext } from "../../../context/AppContext";
+import { useRouter } from "next/router";
+import { CopyOutlined } from "@ant-design/icons";
+import { useNotification } from "../../shared/Notifications";
+import { PERMISSION_TYPE } from "../../../shared/enum/permission.enum";
 
-interface Zones {
-  label: string;
-  value: number
-}
 interface Props {
-  optionZones: Zones[]
+  search?: string;
 }
 
+const PAGE_SIZE = 10;
 
-const Monitor = ({ optionZones }: Props, { req }: { req: IncomingMessage }) => {
-  const router = useRouter()
-  
-  // const protocol = window.location.protocol ;
-  // const host = window.location.host ;
-
-  // const fullUrl = `${protocol}//${host}`
+const Monitor = ({ search }: Props) => {
+  const router = useRouter();
   const { user } = useAppContext();
-  const [monitors, setMonitors] = useState<MonitorInterface[]>();
+  const [monitors, setMonitors] = useState<MonitorInterface[]>([]);
+  const [total, setTotal] = useState(0);
+  const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
-  const { openNotification, contextHolder } = useNotification()
+  const { openNotification, contextHolder } = useNotification();
 
   const [isDeleteModalActive, setIsDeleteModalActive] = useState(false);
   const [isEnableModalActive, setIsEnableModalActive] = useState(false);
   const [isViewModalActive, setIsViewModalActive] = useState(false);
-  const [text, setText] = useState('');
+  const [urlText, setUrlText] = useState("");
 
+  const [activeElementModal, setActiveElementModal] = useState<{
+    id: number;
+    body: { isActive: boolean };
+  }>({ id: 0, body: { isActive: false } });
 
-  const [url, setUrl] = useState('');
-
-  const [activeElementModal, setActiveElementModal] = useState({
-    id: 0,
-    body: {
-      isActive: false,
-    },
-  });
-  const handleCopy = () => {
-    navigator.clipboard.writeText(text);
+  const handleCopyUrl = () => {
+    navigator.clipboard.writeText(urlText);
   };
-  const fetch = (params: ListMonitor): void => {
+
+  const fetchMonitors = (params: ListMonitor): void => {
     setLoading(true);
-    MonitorService.listMonitor(params).then(({ data }) => {
-      setMonitors(data.monitors.sort((a: any, b: any) => b?.id - a?.id));
-    }).finally(() => {
-      setLoading(false);
-    })
-  }
+    MonitorService.listMonitor(params)
+      .then(({ data }) => {
+        setMonitors(data.monitors.sort((a: any, b: any) => b?.id - a?.id));
+        setTotal(data.total ?? data.monitors.length);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  };
+
+  useEffect(() => {
+    setCurrentPage(1);
+    fetchMonitors({ search, limit: PAGE_SIZE, offset: 0 });
+  }, [search]);
+
+  const onPageChange = (page: number) => {
+    setCurrentPage(page);
+    fetchMonitors({
+      search,
+      limit: PAGE_SIZE,
+      offset: (page - 1) * PAGE_SIZE,
+    });
+  };
 
   const actionOptions = (item: MonitorInterface) => [
     {
       label: item.isActive ? "Desactivar" : "Activar",
       key: 0,
+      permissions: [PERMISSION_TYPE.CAN_ENABLE_MONITOR],
       onClick: () => {
         setActiveElementModal({
           id: item.id || 0,
-          body: {
-            isActive: item?.isActive || false,
-          },
+          body: { isActive: item?.isActive || false },
         });
         setIsEnableModalActive(true);
       },
-      // permissions: [PERMISSION_TYPE.CAN_ENABLE_USER],
     },
     {
       label: "Editar",
       key: 1,
+      permissions: [PERMISSION_TYPE.CAN_EDIT_MONITOR],
       onClick: () => router.push(`monitor/editar/${item.id}`),
-      // permissions: [PERMISSION_TYPE.CAN_ENABLE_USER],
     },
-    // {
-    //   label: "Eliminar",
-    //   key: 2,
-    //   onClick: async () => {
-    //     setIsDeleteModalActive(true);
-    //   },
-    //   // permissions: [PERMISSION_TYPE.CAN_DELETE_USER],
-    // },
     {
-      label: "Ver Url",
+      label: "Eliminar",
+      key: 2,
+      permissions: [PERMISSION_TYPE.CAN_DELETE_MONITOR],
+      onClick: () => {
+        setActiveElementModal({
+          id: item.id || 0,
+          body: { isActive: item?.isActive || false },
+        });
+        setIsDeleteModalActive(true);
+      },
+    },
+    {
+      label: "Ver URL",
       key: 3,
       onClick: () => {
+        const baseUrl =
+          typeof window !== "undefined" ? window.location.origin : "";
+        setUrlText(`${baseUrl}/monitor/report/${item.identifier}`);
         setIsViewModalActive(true);
-        console.log('item de la url',item);
-        setText(`https://reporteria-bi.onrender.com/monitor/report/'}` + `${item.identifier}`);
       },
-      // permissions: [PERMISSION_TYPE.CAN_EDIT_USER],
     },
   ];
 
@@ -110,107 +118,61 @@ const Monitor = ({ optionZones }: Props, { req }: { req: IncomingMessage }) => {
     setActiveElementModal({ id: 0, body: { isActive: false } });
     setIsDeleteModalActive(false);
     setIsEnableModalActive(false);
-    setIsViewModalActive(false)
+    setIsViewModalActive(false);
   };
 
-  const onEnableDisableUser = async (id: number) => {
+  const onEnableDisable = async (id: number) => {
     try {
-      // const { pageSize, skip } = page;
       setLoading(true);
-      await MonitorService.updateEnableDesable(id).finally(() => {
-        setLoading(false);
+      await MonitorService.updateEnableDesable(id);
+      openNotification(
+        "success",
+        `Monitor ${!activeElementModal.body.isActive ? "activado" : "desactivado"} exitosamente!`
+      );
+      fetchMonitors({
+        search,
+        limit: PAGE_SIZE,
+        offset: (currentPage - 1) * PAGE_SIZE,
       });
-
-      openNotification('success', `Monitor ${!activeElementModal.body.isActive ? "activado" : "desactivado"} exitosamente!`);
-     
-      fetch({ });
     } catch {
       setLoading(false);
-      openNotification("error","Ocurrio un error al intentar actualizar la información.");
+      openNotification("error", "Ocurrió un error al actualizar el monitor.");
     }
   };
 
-  const onDeleteUser = async (id: number) => {
+  const onDeleteMonitor = async (id: number) => {
     try {
-      // const { pageSize, skip } = page;
       setLoading(true);
-      await MonitorService.deleteMonitor(id).finally(() => {
-        setLoading(false);
+      await MonitorService.deleteMonitor(id);
+      openNotification("success", "Monitor eliminado exitosamente!");
+      const newPage =
+        monitors.length === 1 && currentPage > 1 ? currentPage - 1 : currentPage;
+      setCurrentPage(newPage);
+      fetchMonitors({
+        search,
+        limit: PAGE_SIZE,
+        offset: (newPage - 1) * PAGE_SIZE,
       });
-      message.success("Monitor eliminado exitosamente!");
-      // fetch({ take: pageSize, skip });
     } catch {
       setLoading(false);
-      message.error("Ocurrio un error al intentar eliminar el usuario.");
+      openNotification("error", "Ocurrió un error al eliminar el monitor.");
     }
   };
-
-
-  const onViewMonitor = async (id: number) => {
-    try {
-      // const { pageSize, skip } = page;
-      setLoading(true);
-      // await MonitorService.deleteMonitor(id);
-      // message.success("Monitor eliminado exitosamente!");
-      // fetch({ take: pageSize, skip });
-
-    } catch {
-      setLoading(false);
-      message.error("Ocurrio un error al intentar eliminar el error.");
-    }
-  };
-
-  const onNewUrl = async (params: any) => {
-    try {
-      await message.success("Se ha regenerado una nueva URL");
-
-    } catch (error) {
-
-    }
-  }
 
   const columns: ColumnsType<any> = useMemo(
     () => [
-      {
-        title: "ID",
-        dataIndex: "id",
-        
-      },
-      {
-        title: "Nombre",
-        dataIndex: "name",
-        
-      },
-      {
-        title: "Descripción",
-        dataIndex: "description",
-        
-      },
-      {
-        title: "Alias",
-        dataIndex: "alias",
-        
-      },
-      // {
-      //   title: "Zonas",
-      //   dataIndex: "zones",
-        
-      //   render: (_, zones) => {
-      //     const zona = optionZones.find(zone => zone.value === zones.zones);
-      //     return zona?.label || 'Sin Zona';
-      //   }
-      // },
+      { title: "ID", dataIndex: "id" },
+      { title: "Nombre", dataIndex: "name" },
+      { title: "Descripción", dataIndex: "description" },
+      { title: "Alias", dataIndex: "alias" },
       {
         title: "Sección asignada",
         dataIndex: "report",
-        render: (_, item: MonitorInterfaceItem) => {
-          let segmento = item.report ? `Reporte Bi - ${item.report.name}` :
-            item.dashboard ? `Dashboard 360 - ${item.dashboard.nameScreen}` :
-              'Sin asignar sección';
-
-          return segmento;
-
-        }
+        render: (_: any, item: MonitorInterfaceItem) => {
+          if (item.report) return `Reporte BI - ${item.report.name}`;
+          if (item.dashboard) return `Dashboard 360 - ${item.dashboard.nameScreen}`;
+          return "Sin asignar";
+        },
       },
       {
         title: "Estado",
@@ -221,84 +183,69 @@ const Monitor = ({ optionZones }: Props, { req }: { req: IncomingMessage }) => {
           ) : (
             <Badge color="#DF545C" text="Inactivo" />
           ),
-        
       },
       {
         title: "Acciones",
         dataIndex: "actions",
-        render: (_, item: MonitorInterface) => {
-          const validatedItems = getValidatedItems(actionOptions(item), user?.activePermissions);
-
+        render: (_: any, item: MonitorInterface) => {
+          const validatedItems = getValidatedItems(
+            actionOptions(item),
+            user?.activePermissions
+          );
           return <ActionMenu options={validatedItems} />;
         },
         className: "action-column",
       },
     ],
-    [user?.activePermissions]
+    [user?.activePermissions, currentPage, search]
   );
-
-
-
-  useEffect(() => {
-    fetch({
-      // limit: 10, offset: 0 
-    })
-  }, [])
 
   return (
     <>
-    {contextHolder}
+      {contextHolder}
+
       <ActionMenuModal
         open={isEnableModalActive}
         actionalId={activeElementModal.id}
-        onConfirm={()=>onEnableDisableUser(activeElementModal.id)}
+        onConfirm={() => onEnableDisable(activeElementModal.id)}
         onCancel={onCancelModal}
         width={380}
         content={
-          <>
-            <p>
-              {activeElementModal.body.isActive
-                ? "¿Estás seguro de desactivar este monitor?"
-                : "¿Estás seguro de activar este monitor?"}
-            </p>
-          </>
+          <p>
+            {activeElementModal.body.isActive
+              ? "¿Estás seguro de desactivar este monitor?"
+              : "¿Estás seguro de activar este monitor?"}
+          </p>
         }
       />
 
       <ActionMenuModal
         open={isDeleteModalActive}
         actionalId={activeElementModal.id}
-        onConfirm={onDeleteUser}
+        onConfirm={() => onDeleteMonitor(activeElementModal.id)}
         onCancel={onCancelModal}
         width={380}
         content={
-          <>
-            <p>¿Estás seguro de eliminar este usuario?</p>
-          </>
+          <p>¿Estás seguro de eliminar este monitor? Esta acción no se puede deshacer.</p>
         }
       />
-
 
       <ActionMenuModal
         open={isViewModalActive}
         actionalId={activeElementModal.id}
-        onConfirm={onNewUrl}
+        onConfirm={() => {}}
         onCancel={onCancelModal}
         width={700}
         showFooter={false}
         content={
           <>
             <h1>Ver link</h1>
-
-            <p style={{
-              top: 20
-            }}>URL</p>
-
-            <Input readOnly
-              value={text}
-              onChange={e => setText(e.target.value)}
+            <p style={{ marginTop: 20 }}>URL pública del monitor</p>
+            <Input
+              readOnly
+              value={urlText}
               addonAfter={
-                <Button type="text" onClick={handleCopy}>
+                <Button type="text" onClick={handleCopyUrl}>
                   <CopyOutlined />
                 </Button>
               }
@@ -309,21 +256,22 @@ const Monitor = ({ optionZones }: Props, { req }: { req: IncomingMessage }) => {
 
       <TableTabsStyled>
         <div className="table-tab-container">
-          {/* <TopSearch
-            search={{
-              placeholder: "Buscar usuarios",
-              onClick: (search: string) => { },
-            }}
-          /> */}
           <Table
             columns={columns}
             dataSource={monitors}
             loading={loading}
+            rowKey="id"
+            pagination={{
+              current: currentPage,
+              pageSize: PAGE_SIZE,
+              total,
+              onChange: onPageChange,
+            }}
           />
         </div>
       </TableTabsStyled>
     </>
-  )
-}
+  );
+};
 
 export default Monitor;

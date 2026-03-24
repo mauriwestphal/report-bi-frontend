@@ -1,4 +1,4 @@
-import { Button, Card, Col, Form, message, Row } from "antd";
+import { Button, Card, Col, Form, Row } from "antd";
 import Layout from "../../../../components/layout";
 import RoleForm from "../../../../components/pages/user-role/Role/RoleForm";
 import TopTitle from "../../../../components/shared/TopTitle";
@@ -7,26 +7,25 @@ import RoleService from "../../../../services/RoleService";
 import { useRouter } from "next/router";
 import { useNotification } from "../../../../components/shared/Notifications";
 
-const CreateRolePage = () => {
+const EditRolePage = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const { query } = useRouter();
-  const {openNotification, contextHolder} = useNotification()
+  const { openNotification, contextHolder } = useNotification();
 
   useEffect(() => {
-    if (query && query.id) {
-      setLoading(true);
-      const { id } = query;
-      RoleService.findOne(Number(id))
-        .then(({ data }) => {
-          form.setFieldsValue({
-            ...data,
-            permissions: data.permissions?.map((permission) => permission.id),
-            reportPages: data.reportPages?.map((reportPage) => reportPage.value),
-          });
-        })
-        .finally(() => setLoading(false));
-    }
+    if (!query?.id) return;
+
+    setLoading(true);
+    RoleService.findOne(Number(query.id))
+      .then(({ data }) => {
+        form.setFieldsValue({
+          ...data,
+          permissions: data.permissions?.map((p) => p.id) ?? [],
+          reportPages: data.reportPages?.map((rp) => rp.value) ?? [],
+        });
+      })
+      .finally(() => setLoading(false));
   }, [query]);
 
   const onFinish = async () => {
@@ -34,81 +33,64 @@ const CreateRolePage = () => {
       setLoading(true);
       const values = await form.validateFields();
 
-      RoleService.update({
-        ...values,
-        permissions: values.permissions
-          ? values.permissions.map((permission: any) => ({ id: permission }))
-          : [],
-        reportPages: values.reportPages
-          ? values.reportPages.map((reportPage: any) => ({ id: reportPage}))
-          : [],
+      await RoleService.update({
+        id: Number(query.id),
+        name: values.name,
+        keyName: values.keyName,
         isActive: !!values.isActive,
-      })
-        .then(() => {
-          openNotification('success', 'Rol editado exitosamente!');
-        })
-        .catch((reason) => {
-          openNotification('error', reason.message);
-        })
-        .finally(() => {
-          setLoading(false);
-        });
-    } catch (e) {
+        permissionIds: values.permissions || [],
+        reportPageIds: values.reportPages || [],
+      });
+
+      openNotification("success", "Rol editado exitosamente!");
+    } catch (err: any) {
+      if (err?.message) {
+        openNotification("error", err.message);
+      }
+    } finally {
       setLoading(false);
-      console.error("Not validated fields");
     }
   };
+
   return (
     <>
       {contextHolder}
       <Layout>
-      <TopTitle
-        comeBackConfig={{
-          route: "/user-role?active=role",
-          show: true,
-          text: "Volver a Roles",
-        }}
-        title={{
-          title: "Gestión de Roles / Editar rol",
-        }}
-      />
+        <TopTitle
+          comeBackConfig={{
+            route: "/user-role?active=role",
+            show: true,
+            text: "Volver a Roles",
+          }}
+          title={{ title: "Gestión de Roles / Editar rol" }}
+        />
 
-      <Row gutter={24} className="create-role__container" justify={"center"}>
-        <Col span={12}>
-          <Card bordered={false} style={{ padding: "16px" }}>
-            <RoleForm form={form} />
-            <Row
-              gutter={24}
-              className="create-role__container"
-              justify={"center"}
-              style={{
-                marginTop: 129,
-              }}
-            >
-              <Button
-                type="primary"
-                block
-                style={{ width: "50%" }}
-                onClick={onFinish}
-                loading={loading}
+        <Row gutter={24} className="create-role__container" justify="center">
+          <Col span={12}>
+            <Card bordered={false} style={{ padding: "16px" }}>
+              <RoleForm form={form} />
+              <Row
+                gutter={24}
+                className="create-role__container"
+                justify="center"
+                style={{ marginTop: 129 }}
               >
-                <span
-                  style={{
-                    color: "#fff",
-                  }}
+                <Button
+                  type="primary"
+                  block
+                  style={{ width: "50%" }}
+                  onClick={onFinish}
+                  loading={loading}
                 >
-                  Editar rol
-                </span>
-                
-              </Button>
-            </Row>
-          </Card>
-        </Col>
-      </Row>
-    </Layout>
+                  <span style={{ color: "#fff" }}>Editar rol</span>
+                </Button>
+              </Row>
+            </Card>
+          </Col>
+        </Row>
+      </Layout>
     </>
-
   );
 };
 
-export default CreateRolePage;
+export default EditRolePage;

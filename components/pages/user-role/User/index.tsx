@@ -10,7 +10,6 @@ import UserService from "../../../../services/UserService/services";
 import { RoleInterface, UserInterface } from "../../../layout/interfaces";
 import ActionMenu from "../../../shared/ActionMenu";
 import Table from "../../../shared/Table";
-import { format } from "rut.js";
 import Router from "next/router";
 import TopSearch from "../../../shared/TopSearch";
 import { TableTabsStyled } from "../../../shared/TableTabs/style";
@@ -37,6 +36,7 @@ const UserTab = () => {
     skip: 0,
     total: 0,
   });
+
   useEffect(() => {
     const { pageSize, skip } = page;
     fetch({ take: pageSize, skip });
@@ -45,9 +45,11 @@ const UserTab = () => {
   const fetch = (params: List): void => {
     setLoading(true);
     UserService.list(params).then(({ data }) => {
-      setUsers(data.users);
+      const items = (data as any).users ?? (data as any).data ?? [];
+      const total = (data as any).total ?? 0;
+      setUsers(items);
       setLoading(false);
-      setPage((prevPage) => ({ ...prevPage, total: data.total }));
+      setPage((prevPage) => ({ ...prevPage, total }));
     });
   };
 
@@ -102,7 +104,7 @@ const UserTab = () => {
       fetch({ take: pageSize, skip });
     } catch {
       setLoading(false);
-      message.error("Ocurrio un error al intentar actualizar la información.");
+      message.error("Ocurrió un error al intentar actualizar la información.");
     }
   };
 
@@ -115,7 +117,7 @@ const UserTab = () => {
       fetch({ take: pageSize, skip });
     } catch {
       setLoading(false);
-      message.error("Ocurrio un error al intentar eliminar el usuario.");
+      message.error("Ocurrió un error al intentar eliminar el usuario.");
     }
   };
 
@@ -126,9 +128,7 @@ const UserTab = () => {
       onClick: () => {
         setActiveElementModal({
           id: item.id || 0,
-          body: {
-            isActive: item.isActive,
-          },
+          body: { isActive: item.isActive },
         });
         setIsEnableModalActive(true);
       },
@@ -140,9 +140,7 @@ const UserTab = () => {
       onClick: async () => {
         setActiveElementModal({
           id: item.id || 0,
-          body: {
-            isActive: item.isActive,
-          },
+          body: { isActive: item.isActive },
         });
         setIsDeleteModalActive(true);
       },
@@ -155,32 +153,29 @@ const UserTab = () => {
       permissions: [PERMISSION_TYPE.CAN_EDIT_USER],
     },
   ];
+
   const columns: ColumnsType<UserInterface> = useMemo(
     () => [
       {
-        title: "RUT",
-        dataIndex: "rut",
-        render: (_, item: UserInterface) => {
-          return format(`${item.rut}-${item.dv}`);
-        },
-        sorter: true,
-        showSorterTooltip: false,
-      },
-      {
-        title: "Nombre",
-        dataIndex: "firstName",
-        sorter: true,
-        showSorterTooltip: false,
-      },
-      {
-        title: "Apellido",
-        dataIndex: "lastName",
+        title: "Nombre completo",
+        key: "fullName",
+        render: (_: any, item: UserInterface) =>
+          `${item.firstName} ${item.lastName}`,
         sorter: true,
         showSorterTooltip: false,
       },
       {
         title: "Correo electrónico",
         dataIndex: "email",
+        sorter: true,
+        showSorterTooltip: false,
+      },
+      {
+        title: "Perfil",
+        dataIndex: "role",
+        render: (item: RoleInterface) => (
+          <Tag color="#434343">{item?.name || "Sin perfil"}</Tag>
+        ),
         sorter: true,
         showSorterTooltip: false,
       },
@@ -197,23 +192,13 @@ const UserTab = () => {
           ),
       },
       {
-        title: "Perfil",
-        dataIndex: "role",
-        render: (item: RoleInterface) => {
-          return <Tag color="#434343">{item?.name || "NO ROLE"}</Tag>;
-        },
-        sorter: true,
-        showSorterTooltip: false,
-      },
-      {
         title: "Acciones",
         dataIndex: "actions",
-        render: (_, item: UserInterface) => {
+        render: (_: any, item: UserInterface) => {
           const validatedItems = getValidatedItems(
             actionOptions(item),
             user?.activePermissions
           );
-
           return <ActionMenu options={validatedItems} />;
         },
         className: "action-column",
@@ -231,13 +216,11 @@ const UserTab = () => {
         onCancel={onCancelModal}
         width={380}
         content={
-          <>
-            <p>
-              {activeElementModal.body.isActive
-                ? "¿Estás seguro de desactivar este usuario?"
-                : "¿Estás seguro de activar este usuario?"}
-            </p>
-          </>
+          <p>
+            {activeElementModal.body.isActive
+              ? "¿Estás seguro de desactivar este usuario?"
+              : "¿Estás seguro de activar este usuario?"}
+          </p>
         }
       />
       <ActionMenuModal
@@ -246,11 +229,7 @@ const UserTab = () => {
         onConfirm={onDeleteUser}
         onCancel={onCancelModal}
         width={380}
-        content={
-          <>
-            <p>¿Estás seguro de eliminar este usuario?</p>
-          </>
-        }
+        content={<p>¿Estás seguro de eliminar este usuario?</p>}
       />
       <TableTabsStyled>
         <div className="table-tab-container">
@@ -266,10 +245,10 @@ const UserTab = () => {
             onChange={onTableChange}
             loading={loading}
             pagination={{ ...page }}
+            rowKey="id"
             rowClassName={(record: UserInterface) =>
               !record.isActive ? "row-disabled-element" : "row-active-element"
             }
-            
           />
         </div>
       </TableTabsStyled>

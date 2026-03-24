@@ -10,8 +10,9 @@ export interface DateInterface {
 export interface RoleInterface {
   id: number;
   name: string;
+  keyName?: string;
   permissions: IPermission[];
-  reportPages ?: IReportPage[];
+  reportPages?: IReportPage[];
   totalUsers?: number;
   isActive?: boolean;
   users?: UserInterface[];
@@ -51,24 +52,22 @@ export interface MonitorInterface {
   identifier?: string;
   name: string;
   alias?: string;
-  zones?: number;
-  description?: number;
-  // report_id?: number
-  // dasboardId?: number;
+  description?: string;
   url?: string;
-  createDateUrl?: Date;
-  update_name_url?: Date;
-  deleteDate?: Date;
   isActive?: boolean;
+  createDateUrl?: Date;
+  updateDateUrl?: Date;
   dashboard?: {
     id?: number;
     nameScreen: string;
     isActive: boolean;
   };
   report?: {
-    accessToken: string;
-    embedUrl: string;
-    pageName: string;
+    id?: number;
+    name?: string;
+    accessToken?: string;
+    embedUrl?: string;
+    pageName?: string;
   };
 }
 
@@ -77,19 +76,16 @@ export interface MonitorInterfaceItem {
   identifier?: string;
   name?: string;
   alias?: string;
-  zones?: number;
-  description?: number;
-
+  description?: string;
   url?: string;
-  createDateUrl?: Date;
-  update_name_url?: Date;
-  deleteDate?: Date;
   isActive?: boolean;
+  createDateUrl?: Date;
+  updateDateUrl?: Date;
   report?: {
-    description: string;
+    description?: string;
     id: number;
     name: string;
-    reportId: number;
+    reportId?: number;
   };
   dashboard?: {
     id: number;

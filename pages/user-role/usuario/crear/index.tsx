@@ -3,33 +3,46 @@ import { useState } from "react";
 import Layout from "../../../../components/layout";
 import UserForm from "../../../../components/pages/user-role/User/UserForm";
 import TopTitle from "../../../../components/shared/TopTitle";
-import UserService, {
-  UserServiceDto,
-} from "../../../../services/UserService/services";
+import UserService from "../../../../services/UserService/services";
 
 const CreateUserPage = () => {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
-  const onFinish = async () => {
-    const values: UserServiceDto = await form.validateFields();
 
-    
+  const onFinish = async () => {
+    const values = await form.validateFields();
+
+    const payload = {
+      firstName: values.firstName,
+      lastName: values.lastName,
+      email: values.email,
+      roleId: values.roleId,
+      isActive: values.isActive ?? true,
+    };
+
     setLoading(true);
-    UserService.create(values)
+    UserService.create(payload)
       .then(() => {
         message.success("Usuario creado correctamente!");
         form.resetFields();
       })
-      .catch((reason) => {
-        message.error(reason.message);
+      .catch((reason: any) => {
+        if (reason?.statusCode === 409 || reason?.status === 409) {
+          message.error(
+            "Ya existe un usuario con ese correo electrónico. Por favor verifica los datos."
+          );
+        } else {
+          message.error(reason?.message || "Error al crear el usuario");
+        }
       })
       .finally(() => setLoading(false));
   };
+
   return (
     <Layout>
       <TopTitle
         comeBackConfig={{
-          route: "/home",
+          route: "/user-role",
           show: true,
           text: "Volver a Usuarios",
         }}
@@ -38,31 +51,25 @@ const CreateUserPage = () => {
         }}
       />
 
-      <Row gutter={24} className="create-user__container" justify={"center"}>
-        <Col span={12} style={{
-          justifyContent:'center'
-        }}>
-          <Card bordered={false} style={{ padding: "16px", justifyContent:'center', alignContent:'center', alignItems:'center' }}>
+      <Row gutter={24} className="create-user__container" justify="center">
+        <Col span={12}>
+          <Card bordered={false} style={{ padding: "16px" }}>
             <UserForm form={form} />
-            <Row gutter={24} className="create-user__container" justify={"center"} style={{
-              marginTop:126
-            }}>
-            <Button
-            type="primary"
-            block
-            style={{ width: "50%"}}
-            onClick={onFinish}
-            loading={loading}
-          >
-            <span style={{
-               color: "#fff" 
-            }}>
-
-            Crear nuevo usuario
-
-            </span>
-
-          </Button>
+            <Row
+              gutter={24}
+              className="create-user__container"
+              justify="center"
+              style={{ marginTop: 40 }}
+            >
+              <Button
+                type="primary"
+                block
+                style={{ width: "50%" }}
+                onClick={onFinish}
+                loading={loading}
+              >
+                Crear nuevo usuario
+              </Button>
             </Row>
           </Card>
         </Col>

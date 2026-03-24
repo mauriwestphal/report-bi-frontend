@@ -18,7 +18,7 @@ const TreeForm = ({
   loading,
 }: TreeFormProps) => {
   const [expandedKeys, setExpandedKeys] = useState<React.Key[]>([]);
-  const [checkedKeys, setCheckedKeys] = useState<React.Key[]>(["0-0-0"]);
+  const [checkedKeys, setCheckedKeys] = useState<React.Key[]>([]);
   const [autoExpandParent, setAutoExpandParent] = useState<boolean>(true);
 
   const selectedPermissions: (string | number)[] = Form.useWatch(name, form);
@@ -43,6 +43,22 @@ const TreeForm = ({
     form.setFieldValue(name, childKeys);
     setCheckedKeys(checkedKeysValue);
   };
+
+  const titleRender = (nodeData: any): React.ReactNode => {
+    if (nodeData.children && nodeData.children.length > 0) {
+      const total = nodeData.children.length;
+      const selected = nodeData.children.filter((child: any) =>
+        checkedKeys.includes(child.key)
+      ).length;
+      return (
+        <span>
+          {nodeData.title} ({selected}/{total})
+        </span>
+      );
+    }
+    return <span>{nodeData.title}</span>;
+  };
+
   return (
     <Form.Item name={name} label={label}>
       <Skeleton loading={loading}>
@@ -54,6 +70,7 @@ const TreeForm = ({
           onExpand={onExpand}
           checkedKeys={checkedKeys}
           treeData={permissions}
+          titleRender={titleRender}
         />
       </Skeleton>
     </Form.Item>

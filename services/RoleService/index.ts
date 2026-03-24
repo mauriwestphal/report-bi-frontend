@@ -1,9 +1,21 @@
 import { AxiosResponse } from "axios";
-import { IPermission, RoleInterface } from "../../components/layout/interfaces";
+import { RoleInterface } from "../../components/layout/interfaces";
 import request from "../../utils/request";
 import { List } from "../interfaces/List.interface";
 
-const list = (params: List) => {
+export interface CreateRoleDto {
+  name: string;
+  keyName: string;
+  isActive: boolean;
+  permissionIds: number[];
+  reportPageIds?: number[];
+}
+
+export interface UpdateRoleDto extends Partial<CreateRoleDto> {
+  id: number;
+}
+
+const list = (params: List): Promise<AxiosResponse<RoleInterface[]>> => {
   return request({
     url: "/api/role",
     method: "GET",
@@ -20,39 +32,37 @@ const findOne = (id: number): Promise<AxiosResponse<RoleInterface>> => {
   });
 };
 
-const create = (data: CreateOrUpdateRole) => {
+const create = (data: CreateRoleDto): Promise<AxiosResponse<RoleInterface>> => {
   return request({
     url: "/api/role",
     method: "POST",
     data,
     private: true,
-  }).catch(({ data }) => {
-    throw data;
+  }).catch(({ data: errData }) => {
+    throw errData;
   });
 };
 
-const update = (data: CreateOrUpdateRole) => {
+const update = (data: UpdateRoleDto): Promise<AxiosResponse<RoleInterface>> => {
   return request({
     url: `/api/role/${data.id}`,
     method: "PATCH",
     data,
     private: true,
-  }).catch(({ data }) => {
-    throw data;
+  }).catch(({ data: errData }) => {
+    throw errData;
   });
 };
 
-const deleteRole = (id: number) => {
+const deleteRole = (id: number): Promise<AxiosResponse<void>> => {
   return request({
     url: `/api/role/${id}`,
     method: "DELETE",
     private: true,
-  }).catch(({ data }) => {
-    throw data;
+  }).catch(({ data: errData }) => {
+    throw errData;
   });
 };
-
-interface CreateOrUpdateRole extends Partial<RoleInterface> {}
 
 const RoleService = {
   list,

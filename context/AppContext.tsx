@@ -5,6 +5,7 @@ import UserService from "../services/UserService/services";
 import { PERMISSION_TYPE } from "../shared/enum/permission.enum";
 import { getToken } from "../utils/auth";
 import { isTokenValid } from "../utils/token";
+import { MOCK_USER } from "../utils/mockUser";
 
 interface IUserContext extends UserInterface {
   activePermissions: PERMISSION_TYPE[];
@@ -28,6 +29,12 @@ export function AppProvider({ children }: any) {
 
 
   useEffect(() => {
+    if (process.env.NEXT_PUBLIC_MOCK_AUTH === 'true') {
+      const activePermissions = MOCK_USER.role.permissions.map((p) => p.keyName as PERMISSION_TYPE);
+      setUser({ ...MOCK_USER, activePermissions, activeReports: [] });
+      return;
+    }
+
     const token = getToken();
 
     if (token && isTokenValid(token)) {

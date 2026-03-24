@@ -1,5 +1,4 @@
 import { Layout, Badge, Space } from "antd";
-import Image from "next/image";
 import React, { useEffect, useState } from "react";
 import { HeaderStyled } from "./styled";
 import { lastUpdate } from "../../../services/Dashboard";
@@ -26,21 +25,10 @@ const HeaderDashboard = () => {
       <AntdHeader>
         <div className="header_container__content">
 
-          <div>
-            <Image
-              src="/shared/gama.png"
-              alt="gama icon name"
-              className="gama-icon"
-              width={160}
-              height={31}
-              style={{
-                borderRight: '1px solid white',
-                paddingRight: '5px',
-                marginRight: '10px'
-              }}
-
-                       />
-
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '1.4rem', fontWeight: 700, letterSpacing: '-0.5px', color: '#fff', borderRight: '1px solid white', paddingRight: '10px' }}>
+              Bi<span style={{ color: '#3b82f6' }}>Pro</span>
+            </span>
             <span>Dashboard 360</span>
           </div>
 

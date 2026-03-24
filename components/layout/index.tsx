@@ -31,6 +31,7 @@ const Layout = ({
   }
 
   useEffect(() => {
+    if (process.env.NEXT_PUBLIC_MOCK_AUTH === 'true') return;
     const token = getToken();
     if (token && !isTokenValid(token)) {
       router.push({ pathname: "/auth", query: { expired: true } });

@@ -1,38 +1,33 @@
-import { WarningFilled } from "@ant-design/icons";
-import { Button, Card, Col, Form, message, Row, Space, notification, Spin } from "antd";
+import { Button, Card, Col, Form, Row, Spin } from "antd";
 import { useEffect, useState } from "react";
 
 import Layout from "../../../components/layout";
 import MonitorForm from "../../../components/pages/monitor/MonitorForm";
-import ActionMenuModal from "../../../components/shared/ActionMenuModal";
 import TopTitle from "../../../components/shared/TopTitle";
 import { useNotification } from "../../../components/shared/Notifications";
-import { v4 as uuidv4 } from "uuid";
-import ZoneService from "../../../services/ZoneService";
 import { useRouter } from "next/router";
 import MonitorService from "../../../services/MonitorService/monitor";
-import { MonitorInterfaceItem } from "../../../components/layout/interfaces";
-
-
-type NotificationType = 'success' | 'info' | 'warning' | 'error';
 
 const UpdateMonitorPage = () => {
   const [form] = Form.useForm();
-  const userId = Form.useWatch("id", form);
+  const monitorId = Form.useWatch("id", form);
   const { query } = useRouter();
   const [loading, setLoading] = useState(false);
-  const { openNotification, contextHolder } = useNotification()
+  const { openNotification, contextHolder } = useNotification();
 
-
-useEffect(() => {
+  useEffect(() => {
     if (query.id) {
       MonitorService.getOneMonitor(Number(query.id)).then(({ data }) => {
-        form.setFieldsValue({
-          ...data, 
-        });
+        form.setFieldsValue({ ...data });
         form.setFields([
-            {name:'dashboardId', value: isNaN(Number(data.dashboard?.id)) ? 0 : Number(data.dashboard?.id)},
-            {name:'report_id', value: isNaN(Number(data.report?.id)) ? 0 : Number(data.report?.id)}
+          {
+            name: "dashboardId",
+            value: isNaN(Number(data.dashboard?.id)) ? 0 : Number(data.dashboard?.id),
+          },
+          {
+            name: "report_id",
+            value: isNaN(Number(data.report?.id)) ? 0 : Number(data.report?.id),
+          },
         ]);
       });
     }
@@ -40,24 +35,30 @@ useEffect(() => {
 
   const onFinish = async () => {
     const values = await form.validateFields();
-    console.log("antes",values);
 
-    values.report_id = parseInt(values.report_id);
-    values.dashboardId = parseInt(values.dashboardId);
-    console.log("despues",values);
-    
+    const payload = {
+      ...values,
+      report_id: values.report_id ? parseInt(values.report_id) : undefined,
+      dashboardId: values.dashboardId ? parseInt(values.dashboardId) : undefined,
+    };
+
     setLoading(true);
-    MonitorService.updateMonitor(values)
+    MonitorService.updateMonitor(payload)
       .then(() => {
-        openNotification('success','Monitor editado correctamente');
+        openNotification("success", "Monitor editado correctamente");
       })
-      .catch((reason) => {
-        openNotification('error', reason.message);
+      .catch((reason: any) => {
+        if (reason?.status === 409) {
+          openNotification(
+            "error",
+            "Ya existe un monitor con ese nombre, alias o URL."
+          );
+        } else {
+          openNotification("error", reason?.message || "Error al editar el monitor");
+        }
       })
       .finally(() => setLoading(false));
   };
-
-
 
   return (
     <>
@@ -66,40 +67,41 @@ useEffect(() => {
       <Layout>
         <TopTitle
           comeBackConfig={{
-            route: "/home",
+            route: "/monitor",
             show: true,
             text: "Volver a Monitor",
           }}
           title={{
-            title: "Gestión de Monitores / Crear nuevo Monitor",
+            title: "Gestión de Monitores / Editar Monitor",
           }}
         />
 
-        <Row gutter={24} className="update-monitor__container" justify={"center"}>
-          <Col span={12} style={{justifyContent: 'center'}}>
-            <Spin spinning={!userId}>
-            <Card bordered={false} style={{ padding: "16px", justifyContent: 'center', alignContent: 'center', alignItems: 'center' }}>
-              <MonitorForm form={form} />
-              <Row gutter={24} className="update-monitor__container" justify={"center"} style={{
-                marginTop: 100
-              }}>
-                <Button
-                  type="primary"
-                  block
-                  style={{ width: "50%" }}
-                  onClick={onFinish}
-                  loading={loading}
+        <Row gutter={24} className="update-monitor__container" justify="center">
+          <Col span={12}>
+            <Spin spinning={!monitorId}>
+              <Card bordered={false} style={{ padding: "16px" }}>
+                <MonitorForm form={form} isEdit />
+                <Row
+                  gutter={24}
+                  justify="center"
+                  style={{ marginTop: 40 }}
                 >
-                  Actualizar Monitor
-                </Button>
-              </Row>
-            </Card>
+                  <Button
+                    type="primary"
+                    block
+                    style={{ width: "50%" }}
+                    onClick={onFinish}
+                    loading={loading}
+                  >
+                    Actualizar Monitor
+                  </Button>
+                </Row>
+              </Card>
             </Spin>
           </Col>
         </Row>
       </Layout>
     </>
-
   );
 };
 

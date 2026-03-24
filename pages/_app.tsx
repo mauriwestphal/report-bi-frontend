@@ -1,11 +1,30 @@
 import type { AppProps } from "next/app";
+import { useState, useEffect } from "react";
 import { ConfigProvider } from "antd";
+import { NextIntlClientProvider } from "next-intl";
 import "antd/dist/reset.css";
+import "../styles/globals.css";
 import "../styles/style.scss";
 import "../styles/pages/auth/style.scss";
 import ThemeProviderComponent from "../components/ThemeProviderComponent";
+import { ThemeProvider } from "../context/ThemeContext";
+import { LocaleProvider, Locale } from "../context/LocaleContext";
+import enMessages from "../messages/en.json";
+import esMessages from "../messages/es.json";
+
+const allMessages: Record<Locale, typeof enMessages> = {
+  en: enMessages,
+  es: esMessages,
+};
 
 export default function App({ Component, pageProps }: AppProps) {
+  const [locale, setLocale] = useState<Locale>("en");
+
+  useEffect(() => {
+    const stored = localStorage.getItem("bipro-locale") as Locale;
+    if (stored === "en" || stored === "es") setLocale(stored);
+  }, []);
+
   return (
     <ConfigProvider
       theme={{
@@ -30,7 +49,13 @@ export default function App({ Component, pageProps }: AppProps) {
         },
       }}
     >
-      <ThemeProviderComponent Component={Component} pageProps={pageProps} />
+      <NextIntlClientProvider locale={locale} messages={allMessages[locale]}>
+        <LocaleProvider>
+          <ThemeProvider>
+            <ThemeProviderComponent Component={Component} pageProps={pageProps} />
+          </ThemeProvider>
+        </LocaleProvider>
+      </NextIntlClientProvider>
     </ConfigProvider>
   );
 }

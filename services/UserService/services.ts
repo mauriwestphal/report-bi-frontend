@@ -40,8 +40,8 @@ const create = (body: UserServiceDto) => {
     method: "POST",
     data: body,
     private: true,
-  }).catch(({ data }) => {
-    throw data;
+  }).catch(({ data: errData, status }: any) => {
+    throw { ...errData, status };
   });
 };
 
@@ -51,8 +51,8 @@ const update = (body: UserUpdateDto) => {
     method: "PATCH",
     data: body,
     private: true,
-  }).catch(({ data }) => {
-    throw data;
+  }).catch(({ data: errData, status }: any) => {
+    throw { ...errData, status };
   });
 };
 
@@ -77,17 +77,19 @@ const UserService = {
 
 export default UserService;
 
-export interface UserServiceDto extends UserInterface {
-  workshop_id?:any;
-  zone_id?: any;
-  service_id?:any;
-  contract_supervisor_id?:any;
+export interface UserServiceDto {
+  firstName: string;
+  lastName: string;
+  email: string;
+  roleId: number;
+  isActive?: boolean;
 }
 
-export interface UserUpdateDto extends Partial<UserInterface> {
+export interface UserUpdateDto {
   id: number;
-  workshop_id?:any;
-  zone_id?: any;
-  service_id?:any;
-  contract_supervisor_id?:any;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  roleId?: number;
+  isActive?: boolean;
 }

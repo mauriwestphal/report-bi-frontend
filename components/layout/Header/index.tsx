@@ -1,5 +1,4 @@
 import { Avatar, Dropdown, Layout, Menu } from "antd";
-import Image from "next/image";
 import React, { useEffect, useState } from "react";
 import type { MenuProps } from "antd";
 import { HeaderStyled } from "./styled";
@@ -7,12 +6,16 @@ import { useRouter } from "next/router";
 import { removeToken } from "../../../utils/auth";
 import { useAppContext } from "../../../context/AppContext";
 import { PERMISSION_TYPE } from "../../../shared/enum/permission.enum";
+import { ThemeToggle } from "../../shared/ThemeToggle";
+import { LanguageToggle } from "../../shared/LanguageToggle";
+import { useTranslations } from "next-intl";
 
 const { Header: AntdHeader } = Layout;
 
 const Header = () => {
   const { user } = useAppContext();
   const router = useRouter();
+  const t = useTranslations("nav");
   const [activeKey, setActiveKey] = useState("inicio");
   const items: any[] = [
     // {
@@ -26,7 +29,7 @@ const Header = () => {
     //   position: 2
     // },
     {
-      label: "Gestión Monitores",
+      label: t("monitors"),
       key: "/monitor",
       permissions: [
         PERMISSION_TYPE.CAN_CREATE_MONITOR,
@@ -38,7 +41,7 @@ const Header = () => {
       position: 2
     },
     {
-      label: "Usuarios y Roles",
+      label: t("usersRoles"),
       key: "/user-role",
       permissions: [
         PERMISSION_TYPE.CAN_CREATE_ROLE,
@@ -51,7 +54,7 @@ const Header = () => {
       position: 3
     },
     {
-      label: "Reportes",
+      label: t("reports"),
       key: "/report",
       position: 1
     },
@@ -96,17 +99,10 @@ const Header = () => {
     <HeaderStyled>
       <AntdHeader>
         <div className="header_container__content">
-          <div>
-          <Image
-            src="/shared/gama.png"
-            alt="gama icon name"
-            className="gama-icon"
-            width={160}
-            height={31}
-            style={{
-              marginBottom: 20
-            }}
-               />  
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <span style={{ fontSize: '1.4rem', fontWeight: 700, letterSpacing: '-0.5px', color: '#fff' }}>
+              Bi<span style={{ color: '#3b82f6' }}>Pro</span>
+            </span>
           </div>
 
         
@@ -125,7 +121,9 @@ const Header = () => {
             />
           </div>
           
-          <div className="action-menu-container">
+          <div className="action-menu-container" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <LanguageToggle />
+            <ThemeToggle />
             <Dropdown
               trigger={["hover"]}
               placement="bottom"
