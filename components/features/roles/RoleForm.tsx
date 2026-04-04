@@ -80,12 +80,18 @@ export default function RoleForm({ role, permissions, reportPages = [], mode }: 
   const onSubmit = async (data: RoleFormValues) => {
     setLoading(true)
     try {
+      // Convert null description to undefined
+      const payload = {
+        ...data,
+        description: data.description || undefined
+      }
+      
       if (mode === 'create') {
-        await createRole(data)
+        await createRole(payload)
         router.push('/roles')
         router.refresh()
       } else if (mode === 'edit' && role) {
-        await updateRole(role.id, data)
+        await updateRole(role.id, payload)
         router.push('/roles')
         router.refresh()
       }
@@ -219,24 +225,34 @@ export default function RoleForm({ role, permissions, reportPages = [], mode }: 
               name="reportPageIds"
               render={({ field }) => (
                 <FormItem>
-                  <Select
-                    value={field.value.map(String)}
-                    onValueChange={(values) => field.onChange(values.map(Number))}
-                    multiple
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Seleccionar páginas de reporte" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {reportPages.map((page) => (
-                        <SelectItem key={page.id} value={String(page.id)}>
+                  <FormLabel>Páginas de reporte</FormLabel>
+                  <div className="space-y-2">
+                    {reportPages.map((page) => (
+                      <div key={page.id} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id={`report-page-${page.id}`}
+                          checked={field.value.includes(page.id)}
+                          onChange={(e) => {
+                            const newValue = e.target.checked
+                              ? [...field.value, page.id]
+                              : field.value.filter((id) => id !== page.id)
+                            field.onChange(newValue)
+                          }}
+                          className="h-4 w-4 rounded border-gray-300"
+                        />
+                        <label
+                          htmlFor={`report-page-${page.id}`}
+                          className="text-sm font-medium leading-none"
+                        >
                           {page.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                  <FormDescription>
+                    Páginas de reporte a las que tendrá acceso este rol
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

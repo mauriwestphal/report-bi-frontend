@@ -9,6 +9,8 @@ function CompleteContent() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
+    if (!searchParams) return;
+    
     const token = searchParams.get('token');
     const status = searchParams.get('status');
 

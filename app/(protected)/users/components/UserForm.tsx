@@ -38,7 +38,7 @@ export default function UserForm({ userId, onSuccess }: UserFormProps) {
     const fetchRoles = async () => {
       try {
         const rolesData = await getRoles()
-        setRoles(rolesData)
+        setRoles(rolesData.roles || [])
       } catch (error) {
         console.error('Error fetching roles:', error)
       }

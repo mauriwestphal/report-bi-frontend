@@ -1,8 +1,10 @@
 import { Suspense } from 'react'
 import { notFound } from 'next/navigation'
-import { apiFetchServer } from '@/lib/api'
+import { apiFetchServer } from '@/lib/api/server'
 import RoleForm from '@/components/features/roles/RoleForm'
 import RolesSkeleton from '@/components/features/roles/RolesSkeleton'
+
+export const dynamic = 'force-dynamic'
 
 interface EditRolePageProps {
   params: Promise<{ id: string }>
@@ -17,9 +19,9 @@ export default async function EditRolePage({ params }: EditRolePageProps) {
   }
 
   // Obtener rol y permisos disponibles en el servidor
-  let role = null
-  let permissions = []
-  let reportPages = []
+  let role: any = null
+  let permissions: any[] = []
+  let reportPages: any[] = []
   
   try {
     // Obtener el rol

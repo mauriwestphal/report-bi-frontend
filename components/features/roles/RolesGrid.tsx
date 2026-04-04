@@ -11,7 +11,7 @@ import { useApp } from '@/hooks/useApp'
 import { PERMISSION_TYPE } from '@/shared/enum/permission.enum'
 import { getRoles, deleteRole } from '@/lib/api/roles'
 import { Role } from '@/lib/types/roles'
-import ConfirmDialog from '@/components/shared/ConfirmDialog'
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog'
 
 interface RolesGridProps {
   initialRoles: Role[]
@@ -204,8 +204,8 @@ export default function RolesGrid({ initialRoles, initialTotal, canCreateRole }:
         title="Eliminar Rol"
         description={`¿Estás seguro de eliminar el rol "${roleToDelete?.name}"? Esta acción no se puede deshacer.`}
         onConfirm={handleDelete}
-        confirmText="Eliminar"
-        cancelText="Cancelar"
+        confirmLabel="Eliminar"
+        cancelLabel="Cancelar"
         variant="destructive"
       />
     </div>

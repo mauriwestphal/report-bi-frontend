@@ -1,3 +1,5 @@
+"use client";
+
 import { createContext, useContext, useEffect, useState } from "react";
 import { UserInterface } from "../components/layout/interfaces";
 import UserService from "../services/UserService/services";
@@ -14,9 +16,12 @@ interface IUserContext extends UserInterface {
 interface IContext {
   user?: IUserContext;
   getUser: () => void;
+  clearUser: () => void;
+  isLoading: boolean;
 }
 
-const Context = createContext<IContext>({} as IContext);
+export const AppContext = createContext<IContext>({} as IContext);
+const Context = AppContext;
 
 export function useAppContext() {
   return useContext(Context);
@@ -59,7 +64,11 @@ export function AppProvider({ children }: any) {
     }
   };
 
-  const value = { user, getUser };
+  const clearUser = () => {
+    setUser(undefined);
+  };
+
+  const value = { user, getUser, clearUser, isLoading: loading };
 
   if (loading) {
     return (

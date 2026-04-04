@@ -1,12 +1,14 @@
 import { Suspense } from 'react'
-import { apiFetchServer } from '@/lib/api'
+import { apiFetchServer } from '@/lib/api/server'
 import RoleForm from '@/components/features/roles/RoleForm'
 import RolesSkeleton from '@/components/features/roles/RolesSkeleton'
 
+export const dynamic = 'force-dynamic'
+
 export default async function CreateRolePage() {
   // Obtener permisos disponibles en el servidor
-  let permissions = []
-  let reportPages = []
+  let permissions: any[] = []
+  let reportPages: any[] = []
   
   try {
     permissions = await apiFetchServer<any[]>('/api/permission')

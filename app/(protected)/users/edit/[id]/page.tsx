@@ -11,7 +11,7 @@ export default function EditUserPage() {
   const params = useParams()
   const { user } = useApp()
 
-  const userId = params.id ? parseInt(params.id as string) : undefined
+  const userId = params?.id ? parseInt(params.id as string) : undefined
   const canEditUser = user?.activePermissions?.includes(PERMISSION_TYPE.CAN_EDIT_USER)
 
   // Redirect if user doesn't have permission or no ID

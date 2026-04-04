@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import UserForm from '../components/UserForm'
@@ -13,8 +14,13 @@ export default function CreateUserPage() {
   const canCreateUser = user?.activePermissions?.includes(PERMISSION_TYPE.CAN_CREATE_USER)
 
   // Redirect if user doesn't have permission
+  useEffect(() => {
+    if (!canCreateUser) {
+      router.push('/users')
+    }
+  }, [canCreateUser, router])
+
   if (!canCreateUser) {
-    router.push('/users')
     return null
   }
 

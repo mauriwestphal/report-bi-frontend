@@ -1,6 +1,7 @@
 'use client'
 
 import { useApp } from '@/hooks/useApp'
+import { hasPermission } from '@/lib/auth/permissions'
 import type { PermissionKey } from '@/lib/types'
 
 interface PermissionGuardProps {
@@ -10,6 +11,6 @@ interface PermissionGuardProps {
 }
 
 export function PermissionGuard({ permission, children, fallback = null }: PermissionGuardProps) {
-  const { hasPermission } = useApp()
-  return hasPermission(permission) ? <>{children}</> : <>{fallback}</>
+  const { user } = useApp()
+  return hasPermission(user, permission) ? <>{children}</> : <>{fallback}</>
 }

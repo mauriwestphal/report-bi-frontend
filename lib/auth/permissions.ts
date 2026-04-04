@@ -1,11 +1,16 @@
 import { PERMISSIONS, PermissionValue } from './constants'
 import type { User } from '@/lib/types'
 
+interface UserWithPermissions {
+  id?: number
+  activePermissions?: string[]
+}
+
 /**
  * Check if a user has a specific permission
  */
 export function hasPermission(
-  user: User | null | undefined,
+  user: User | UserWithPermissions | null | undefined,
   permission: PermissionValue | string
 ): boolean {
   if (!user) return false

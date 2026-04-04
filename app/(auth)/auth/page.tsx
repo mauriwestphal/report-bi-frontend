@@ -5,8 +5,8 @@ import { useSearchParams } from 'next/navigation'
 
 function LoginContent() {
   const searchParams = useSearchParams()
-  const expired = searchParams.get('expired')
-  const status = searchParams.get('status')
+  const expired = searchParams?.get('expired')
+  const status = searchParams?.get('status')
 
   const handleLogin = () => {
     window.location.href = `${process.env.NEXT_PUBLIC_URL_API}/auth/ms/redir`

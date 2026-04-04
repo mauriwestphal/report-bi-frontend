@@ -19,6 +19,9 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
   return res.json()
 }
 
-export { apiFetchServer } from './server'
+// Export functions for Client Components
 export * from './users'
 export * from './roles'
+export * from './monitors'
+
+// Note: apiFetchServer is only for Server Components and should be imported directly from './server'

@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useApp } from '@/hooks/useApp'
+import { hasPermission } from '@/lib/auth/permissions'
 import { UserMenu } from './UserMenu'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 
@@ -14,27 +15,27 @@ interface NavLink {
 
 export function Navbar() {
   const pathname = usePathname()
-  const { hasPermission } = useApp()
+  const { user } = useApp()
 
   const links: NavLink[] = [
     {
       href: '/reports',
       label: 'Reportes',
-      visible: hasPermission('CAN_VIEW_REPORTS'),
+      visible: hasPermission(user, 'CAN_VIEW_REPORTS'),
     },
     {
       href: '/monitors',
       label: 'Monitores',
-      visible: hasPermission('CAN_CREATE_MONITOR') || hasPermission('CAN_EDIT_MONITOR'),
+      visible: hasPermission(user, 'CAN_CREATE_MONITOR') || hasPermission(user, 'CAN_EDIT_MONITOR'),
     },
     {
       href: '/users',
       label: 'Usuarios y Roles',
       visible:
-        hasPermission('CAN_CREATE_USER') ||
-        hasPermission('CAN_EDIT_USER') ||
-        hasPermission('CAN_CREATE_ROLE') ||
-        hasPermission('CAN_EDIT_ROLE'),
+        hasPermission(user, 'CAN_CREATE_USER') ||
+        hasPermission(user, 'CAN_EDIT_USER') ||
+        hasPermission(user, 'CAN_CREATE_ROLE') ||
+        hasPermission(user, 'CAN_EDIT_ROLE'),
     },
   ]
 
@@ -58,7 +59,7 @@ export function Navbar() {
           {visibleLinks.length > 0 && (
             <ul className="uss-mainnav__items">
               {visibleLinks.map((link) => {
-                const isActive = pathname.startsWith(link.href)
+                const isActive = pathname?.startsWith(link.href) || false
                 return (
                   <li key={link.href} className="uss-mainnav__item">
                     <Link

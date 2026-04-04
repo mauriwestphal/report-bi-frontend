@@ -1,8 +1,10 @@
 import { Suspense } from 'react'
-import { apiFetchServer } from '@/lib/api'
+import { apiFetchServer } from '@/lib/api/server'
 import { PERMISSION_TYPE } from '@/shared/enum/permission.enum'
 import RolesGrid from '@/components/features/roles/RolesGrid'
 import RolesSkeleton from '@/components/features/roles/RolesSkeleton'
+
+export const dynamic = 'force-dynamic'
 
 export default async function RolesPage() {
   // Obtener roles iniciales en el servidor

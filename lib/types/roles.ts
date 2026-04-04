@@ -26,7 +26,6 @@ export interface CreateRoleDto {
 }
 
 export interface UpdateRoleDto {
-  id: number
   name?: string
   keyName?: string
   description?: string | null

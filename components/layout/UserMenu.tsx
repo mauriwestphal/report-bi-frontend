@@ -20,7 +20,7 @@ export function UserMenu() {
     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
       <div style={{ textAlign: 'right', lineHeight: 1.3 }}>
         <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-strong)' }}>
-          {user.name}
+          {user.firstName} {user.lastName}
         </div>
         <div style={{ fontSize: '0.75rem', color: 'var(--text-subtle)' }}>
           {user.email}
