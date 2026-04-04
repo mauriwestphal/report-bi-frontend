@@ -36,8 +36,7 @@ export default function MonitorsList({ monitors }: MonitorsListProps) {
   }
 
   const handleEdit = (id: number) => {
-    // TODO: Implementar página de edición
-    console.log('Edit monitor:', id)
+    router.push(`/monitors/edit/${id}`)
   }
 
   const handleToggleActive = async (id: number, currentStatus: boolean) => {
