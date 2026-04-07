@@ -26,6 +26,7 @@ export interface UserInterface {
   lastName: string;
   email: string;
   role: RoleInterface;
+  clientId?: number;
   workshop_id?: string;
   service_id?:string;
   contract_supervisor_id?: string;

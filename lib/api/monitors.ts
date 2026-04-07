@@ -4,54 +4,37 @@ import { apiFetch } from '@/lib/api'
 import type { MonitorFormValues } from '@/lib/validations/monitor'
 
 export async function getMonitors(): Promise<MonitorList[]> {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_URL_API}/api/monitor`,
-    { cache: 'no-store' }
-  )
-  if (!res.ok) throw new Error(`API error: ${res.status}`)
-  return res.json()
+  return apiFetch<MonitorList[]>('/api/monitor', {
+    cache: 'no-store'
+  })
 }
 
 export async function getMonitorEmbed(id: string): Promise<MonitorEmbed> {
   if (IS_DEV_MODE) return MOCK_MONITOR_EMBED
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_URL_API}/api/monitor/${id}`,
-    { cache: 'no-store' }
-  )
-  if (!res.ok) throw new Error(`API error: ${res.status}`)
-  return res.json()
+  return apiFetch<MonitorEmbed>(`/api/monitor/${id}`, {
+    cache: 'no-store'
+  })
 }
 
 export async function getMonitorEmbedPublic(uuid: string): Promise<MonitorEmbed> {
   if (IS_DEV_MODE) return MOCK_MONITOR_EMBED
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_URL_API}/api/monitor/identifier/${uuid}`,
-    { cache: 'no-store' }
-  )
-  if (!res.ok) throw new Error(`API error: ${res.status}`)
-  return res.json()
+  return apiFetch<MonitorEmbed>(`/api/monitor/identifier/${uuid}`, {
+    cache: 'no-store'
+  })
 }
 
 export async function toggleMonitorActive(id: number): Promise<void> {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_URL_API}/api/monitor/updateEnableDesable/${id}`,
-    {
-      method: 'PATCH',
-      cache: 'no-store',
-    }
-  )
-  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  await apiFetch<void>(`/api/monitor/updateEnableDesable/${id}`, {
+    method: 'PATCH',
+    cache: 'no-store',
+  })
 }
 
 export async function deleteMonitor(id: number): Promise<void> {
-  const res = await fetch(
-    `${process.env.NEXT_PUBLIC_URL_API}/api/monitor/${id}`,
-    {
-      method: 'DELETE',
-      cache: 'no-store',
-    }
-  )
-  if (!res.ok) throw new Error(`API error: ${res.status}`)
+  await apiFetch<void>(`/api/monitor/${id}`, {
+    method: 'DELETE',
+    cache: 'no-store',
+  })
 }
 
 export async function createMonitor(data: MonitorFormValues): Promise<MonitorList> {

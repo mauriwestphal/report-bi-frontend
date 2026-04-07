@@ -6,6 +6,7 @@ import { useApp } from '@/hooks/useApp'
 import { hasPermission } from '@/lib/auth/permissions'
 import { UserMenu } from './UserMenu'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
+import { ClientSelector } from '@/components/features/clients/ClientSelector'
 
 interface NavLink {
   href: string
@@ -72,7 +73,8 @@ export function Navbar() {
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
+          <ClientSelector />
           <UserMenu />
           <ThemeToggle />
         </div>

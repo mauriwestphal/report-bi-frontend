@@ -20,6 +20,15 @@ const request = <T = any>(config: RequestConfig): Promise<AxiosResponse<T>> => {
     }
   }
 
+  // Add X-Client-Id header if active client is set
+  const activeClientId = typeof window !== 'undefined' 
+    ? localStorage.getItem('bipro-active-client-id')
+    : null;
+  
+  if (activeClientId && activeClientId !== 'null') {
+    headers["X-Client-Id"] = activeClientId;
+  }
+
   const baseURL = process.env.NEXT_PUBLIC_URL_API || "";
 
   return axios({

@@ -28,17 +28,8 @@ export async function login(data: LoginRequest): Promise<LoginResponse> {
   return result
 }
 
+import { apiFetch } from './index'
+
 export async function getCurrentUser() {
-  const response = await fetch(`${process.env.NEXT_PUBLIC_URL_API}/auth/me`, {
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-  })
-
-  if (!response.ok) {
-    throw new Error('Error al obtener usuario')
-  }
-
-  return response.json()
+  return apiFetch('/auth/me')
 }

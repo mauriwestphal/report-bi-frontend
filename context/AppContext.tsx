@@ -15,6 +15,9 @@ interface IUserContext extends UserInterface {
 
 interface IContext {
   user?: IUserContext;
+  activeClientId?: number | null;
+  setActiveClientId: (clientId: number | null) => void;
+  clearActiveClientId: () => void;
   getUser: () => void;
   clearUser: () => void;
   isLoading: boolean;
@@ -30,6 +33,7 @@ export function useAppContext() {
 export function AppProvider({ children }: any) {
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<IUserContext>();
+  const [activeClientId, setActiveClientIdState] = useState<number | null>(null);
 
   useEffect(() => {
     if (process.env.NEXT_PUBLIC_MOCK_AUTH === "true") {
@@ -70,7 +74,23 @@ export function AppProvider({ children }: any) {
     setUser(undefined);
   };
 
-  const value = { user, getUser, clearUser, isLoading: loading };
+  const setActiveClientId = (clientId: number | null) => {
+    setActiveClientIdState(clientId);
+  };
+
+  const clearActiveClientId = () => {
+    setActiveClientIdState(null);
+  };
+
+  const value = { 
+    user, 
+    activeClientId,
+    setActiveClientId,
+    clearActiveClientId,
+    getUser, 
+    clearUser, 
+    isLoading: loading 
+  };
 
   if (loading) {
     return (
