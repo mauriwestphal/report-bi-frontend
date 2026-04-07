@@ -3,6 +3,7 @@ import { apiFetchServer } from '@/lib/api/server'
 import { PERMISSION_TYPE } from '@/shared/enum/permission.enum'
 import RolesGrid from '@/components/features/roles/RolesGrid'
 import RolesSkeleton from '@/components/features/roles/RolesSkeleton'
+import { PageHeader } from '@/components/layout/PageHeader'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,16 +22,11 @@ export default async function RolesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Gestión de Roles</h1>
-          <p className="text-muted-foreground">
-            Administra los roles del sistema y sus permisos
-          </p>
-        </div>
-      </div>
+    <main className="p-8 space-y-6">
+      <PageHeader 
+        title="Gestión de Roles" 
+        description="Administra los roles del sistema y sus permisos"
+      />
 
       {/* Main Content */}
       <div className="rounded-lg border border-border bg-card p-6">
@@ -42,6 +38,6 @@ export default async function RolesPage() {
           />
         </Suspense>
       </div>
-    </div>
+    </main>
   )
 }

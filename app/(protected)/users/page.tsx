@@ -6,6 +6,7 @@ import { Plus } from 'lucide-react'
 import UserList from './components/UserList'
 import { useApp } from '@/hooks/useApp'
 import { PERMISSION_TYPE } from '@/shared/enum/permission.enum'
+import { PageHeader } from '@/components/layout/PageHeader'
 
 export default function UsersPage() {
   const router = useRouter()
@@ -15,16 +16,11 @@ export default function UsersPage() {
   const canCreateUser = user?.activePermissions?.includes(PERMISSION_TYPE.CAN_CREATE_USER)
 
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Gestión de Usuarios</h1>
-          <p className="text-muted-foreground">
-            Administra los usuarios del sistema y sus permisos
-          </p>
-        </div>
-        
+    <main className="p-8 space-y-6">
+      <PageHeader 
+        title="Gestión de Usuarios" 
+        description="Administra los usuarios del sistema y sus permisos"
+      >
         {canCreateUser && (
           <button
             onClick={() => router.push('/users/create')}
@@ -34,7 +30,7 @@ export default function UsersPage() {
             Nuevo usuario
           </button>
         )}
-      </div>
+      </PageHeader>
 
       {/* Main Content */}
       <div className="rounded-lg border border-border bg-card p-6">
@@ -43,6 +39,6 @@ export default function UsersPage() {
           onSearchChange={setSearch}
         />
       </div>
-    </div>
+    </main>
   )
 }

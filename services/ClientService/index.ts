@@ -10,6 +10,15 @@ export class ClientService {
     });
     return response.data;
   }
+
+  async getClient(id: number): Promise<SystemClient> {
+    const response = await request<SystemClient>({
+      url: `/api/system-client/${id}`,
+      method: 'GET',
+      private: true,
+    });
+    return response.data;
+  }
 }
 
 export const clientService = new ClientService();

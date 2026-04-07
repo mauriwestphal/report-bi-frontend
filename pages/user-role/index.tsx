@@ -4,11 +4,11 @@ import { Plus } from "lucide-react";
 import Layout from "../../components/layout";
 import UserTab from "../../components/pages/user-role/User";
 import RoleTab from "../../components/pages/user-role/Role";
-import { PageHeader } from "../../components/shared/PageHeader";
 import { Button } from "../../components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../components/ui/tabs";
 import { useAppContext } from "../../context/AppContext";
 import { PERMISSION_TYPE } from "../../shared/enum/permission.enum";
+import { PageHeader } from "../../components/layout/PageHeader";
 
 const UserRolePage = () => {
   const router = useRouter();
@@ -28,7 +28,7 @@ const UserRolePage = () => {
 
   return (
     <Layout>
-      <div className="space-y-4">
+      <div className="space-y-4 p-8">
         <PageHeader title="Gestión de Usuarios y Roles" />
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
