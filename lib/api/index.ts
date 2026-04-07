@@ -20,6 +20,7 @@ export async function apiFetch<T>(path: string, options?: RequestInit): Promise<
 }
 
 // Export functions for Client Components
+export * from './auth'
 export * from './users'
 export * from './roles'
 export * from './monitors'

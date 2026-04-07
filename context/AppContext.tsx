@@ -2,11 +2,11 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { UserInterface } from "../components/layout/interfaces";
-import UserService from "../services/UserService/services";
 import { PERMISSION_TYPE } from "../shared/enum/permission.enum";
-import { getToken } from "../utils/auth";
+import { getToken } from "../lib/auth";
 import { isTokenValid } from "../utils/token";
 import { MOCK_USER } from "../utils/mockUser";
+import { apiFetch } from "../lib/api";
 
 interface IUserContext extends UserInterface {
   activePermissions: PERMISSION_TYPE[];
@@ -49,7 +49,7 @@ export function AppProvider({ children }: any) {
   const getUser = async () => {
     setLoading(true);
     try {
-      const { data } = await UserService.getLoggerUser();
+      const data = await apiFetch<UserInterface>('/auth/me');
       if (data && data.role) {
         const activePermissions = data.role.permissions.map(
           (permission) => permission.keyName
@@ -59,6 +59,8 @@ export function AppProvider({ children }: any) {
           : [];
         setUser({ ...data, activePermissions, activeReports });
       }
+    } catch (error) {
+      console.error('Error fetching user:', error);
     } finally {
       setLoading(false);
     }
