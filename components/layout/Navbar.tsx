@@ -6,6 +6,7 @@ import { useApp } from '@/hooks/useApp'
 import { hasPermission } from '@/lib/auth/permissions'
 import { UserMenu } from './UserMenu'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
+import { ClientSelector } from '@/components/features/clients/ClientSelector'
 
 interface NavLink {
   href: string
@@ -42,29 +43,26 @@ export function Navbar() {
   const visibleLinks = links.filter((l) => l.visible)
 
   return (
-    <nav className="uss-mainnav">
-      <div className="uss-mainnav__wrap" style={{ paddingLeft: '2rem', paddingRight: '2rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', flex: 1 }}>
-          <span
-            style={{
-              fontWeight: 700,
-              fontSize: '1rem',
-              color: 'var(--text-strong)',
-              whiteSpace: 'nowrap',
-            }}
-          >
+    <nav className="bg-background border-b border-border">
+      <div className="px-8 flex items-center justify-between h-14">
+        <div className="flex items-center gap-8 flex-1">
+          <span className="font-bold text-base text-foreground whitespace-nowrap">
             Plataforma BI USS
           </span>
 
           {visibleLinks.length > 0 && (
-            <ul className="uss-mainnav__items">
+            <ul className="flex items-center gap-4">
               {visibleLinks.map((link) => {
                 const isActive = pathname?.startsWith(link.href) || false
                 return (
-                  <li key={link.href} className="uss-mainnav__item">
+                  <li key={link.href}>
                     <Link
                       href={link.href}
-                      className={`uss-mainnav__item-link${isActive ? ' active' : ''}`}
+                      className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                        isActive
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-muted-foreground hover:text-foreground hover:bg-accent'
+                      }`}
                     >
                       {link.label}
                     </Link>
@@ -75,7 +73,8 @@ export function Navbar() {
           )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <div className="flex items-center gap-4">
+          <ClientSelector />
           <UserMenu />
           <ThemeToggle />
         </div>

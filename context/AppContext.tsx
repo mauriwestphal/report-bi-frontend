@@ -2,11 +2,11 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { UserInterface } from "../components/layout/interfaces";
-import UserService from "../services/UserService/services";
 import { PERMISSION_TYPE } from "../shared/enum/permission.enum";
-import { getToken } from "../utils/auth";
+import { getToken } from "../lib/auth";
 import { isTokenValid } from "../utils/token";
 import { MOCK_USER } from "../utils/mockUser";
+import { apiFetch } from "../lib/api";
 
 interface IUserContext extends UserInterface {
   activePermissions: PERMISSION_TYPE[];
@@ -15,6 +15,9 @@ interface IUserContext extends UserInterface {
 
 interface IContext {
   user?: IUserContext;
+  activeClientId?: number | null;
+  setActiveClientId: (clientId: number | null) => void;
+  clearActiveClientId: () => void;
   getUser: () => void;
   clearUser: () => void;
   isLoading: boolean;
@@ -30,6 +33,7 @@ export function useAppContext() {
 export function AppProvider({ children }: any) {
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<IUserContext>();
+  const [activeClientId, setActiveClientIdState] = useState<number | null>(null);
 
   useEffect(() => {
     if (process.env.NEXT_PUBLIC_MOCK_AUTH === "true") {
@@ -49,7 +53,7 @@ export function AppProvider({ children }: any) {
   const getUser = async () => {
     setLoading(true);
     try {
-      const { data } = await UserService.getLoggerUser();
+      const data = await apiFetch<UserInterface>('/auth/me');
       if (data && data.role) {
         const activePermissions = data.role.permissions.map(
           (permission) => permission.keyName
@@ -59,6 +63,8 @@ export function AppProvider({ children }: any) {
           : [];
         setUser({ ...data, activePermissions, activeReports });
       }
+    } catch (error) {
+      console.error('Error fetching user:', error);
     } finally {
       setLoading(false);
     }
@@ -68,7 +74,23 @@ export function AppProvider({ children }: any) {
     setUser(undefined);
   };
 
-  const value = { user, getUser, clearUser, isLoading: loading };
+  const setActiveClientId = (clientId: number | null) => {
+    setActiveClientIdState(clientId);
+  };
+
+  const clearActiveClientId = () => {
+    setActiveClientIdState(null);
+  };
+
+  const value = { 
+    user, 
+    activeClientId,
+    setActiveClientId,
+    clearActiveClientId,
+    getUser, 
+    clearUser, 
+    isLoading: loading 
+  };
 
   if (loading) {
     return (

@@ -3,6 +3,7 @@ import { hasPermission } from '@/lib/auth/permissions'
 import { PERMISSIONS } from '@/lib/auth/constants'
 import { getServerSession } from '@/lib/auth/server'
 import MonitorsList from '@/components/features/monitors/MonitorsList'
+import { PageHeader } from '@/components/layout/PageHeader'
 
 export default async function MonitorsPage() {
   const session = await getServerSession()
@@ -30,22 +31,26 @@ export default async function MonitorsPage() {
     const monitors = await getMonitors()
     
     return (
-      <div className="py-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <main className="p-8">
+        <PageHeader title="Monitores" />
+        <div className="max-w-7xl mx-auto">
           <MonitorsList monitors={monitors} />
         </div>
-      </div>
+      </main>
     )
   } catch (error) {
     console.error('Error loading monitors:', error)
     
     return (
-      <div className="py-12 text-center">
-        <h2 className="text-2xl font-semibold text-gray-900">Error al cargar monitores</h2>
-        <p className="mt-2 text-gray-600">
-          {error instanceof Error ? error.message : 'Ocurrió un error inesperado'}
-        </p>
-      </div>
+      <main className="p-8">
+        <PageHeader title="Monitores" />
+        <div className="py-12 text-center">
+          <h2 className="text-2xl font-semibold text-gray-900">Error al cargar monitores</h2>
+          <p className="mt-2 text-gray-600">
+            {error instanceof Error ? error.message : 'Ocurrió un error inesperado'}
+          </p>
+        </div>
+      </main>
     )
   }
 }

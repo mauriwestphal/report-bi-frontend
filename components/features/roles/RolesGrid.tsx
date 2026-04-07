@@ -112,11 +112,11 @@ export default function RolesGrid({ initialRoles, initialTotal, canCreateRole }:
             {loading ? (
               Array.from({ length: 3 }).map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell><div className="h-4 w-32 bg-gray-200 rounded uss-skeleton-pulse"></div></TableCell>
-                  <TableCell><div className="h-4 w-24 bg-gray-200 rounded uss-skeleton-pulse"></div></TableCell>
-                  <TableCell><div className="h-4 w-16 bg-gray-200 rounded uss-skeleton-pulse"></div></TableCell>
-                  <TableCell><div className="h-4 w-20 bg-gray-200 rounded uss-skeleton-pulse"></div></TableCell>
-                  <TableCell><div className="h-4 w-24 bg-gray-200 rounded uss-skeleton-pulse"></div></TableCell>
+                  <TableCell><div className="h-4 w-32 bg-muted rounded animate-pulse"></div></TableCell>
+                  <TableCell><div className="h-4 w-24 bg-muted rounded animate-pulse"></div></TableCell>
+                  <TableCell><div className="h-4 w-16 bg-muted rounded animate-pulse"></div></TableCell>
+                  <TableCell><div className="h-4 w-20 bg-muted rounded animate-pulse"></div></TableCell>
+                  <TableCell><div className="h-4 w-24 bg-muted rounded animate-pulse"></div></TableCell>
                 </TableRow>
               ))
             ) : roles.length === 0 ? (
