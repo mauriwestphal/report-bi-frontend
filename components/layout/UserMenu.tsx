@@ -17,17 +17,17 @@ export function UserMenu() {
   }
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-      <div style={{ textAlign: 'right', lineHeight: 1.3 }}>
-        <div style={{ fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-strong)' }}>
+    <div className="flex items-center gap-3">
+      <div className="text-right leading-tight">
+        <div className="text-sm font-semibold text-foreground">
           {user.firstName} {user.lastName}
         </div>
-        <div style={{ fontSize: '0.75rem', color: 'var(--text-subtle)' }}>
+        <div className="text-xs text-muted-foreground">
           {user.email}
         </div>
       </div>
       <button
-        className="uss-btn uss-btn--secondary uss-btn--small"
+        className="px-3 py-1.5 text-sm font-medium rounded-md border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
         onClick={handleLogout}
         type="button"
       >

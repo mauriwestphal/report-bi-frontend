@@ -13,39 +13,22 @@ function LoginContent() {
   }
 
   return (
-    <main
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: 'var(--background)',
-      }}
-    >
-      <div
-        className="uss-card"
-        style={{
-          width: '100%',
-          maxWidth: '420px',
-          padding: '2.5rem',
-          borderRadius: 'var(--border-radius)',
-          backgroundColor: 'var(--surface-default)',
-        }}
-      >
-        <div className="uss-card__body" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <div style={{ textAlign: 'center' }}>
-            <h1 className="uss-h3" style={{ color: 'var(--text-strong)', marginBottom: '0.5rem' }}>
+    <main className="min-h-screen flex items-center justify-center bg-background">
+      <div className="w-full max-w-md p-8 rounded-lg border border-border bg-card shadow-sm">
+        <div className="flex flex-col gap-6">
+          <div className="text-center">
+            <h1 className="text-xl font-bold text-foreground mb-2">
               Plataforma BI USS
             </h1>
-            <p style={{ color: 'var(--text-subtle)', fontSize: '0.9rem', margin: 0 }}>
+            <p className="text-sm text-muted-foreground">
               Acceso exclusivo mediante cuenta Microsoft
             </p>
           </div>
 
           {expired === 'true' && (
-            <div className="uss-alert-message uss-alert-message--warning" role="alert">
-              <div className="uss-alert-message__content">
-                <span className="uss-alert-message--warning__title">
+            <div className="p-3 rounded-md bg-yellow-50 border border-yellow-200 text-yellow-800 dark:bg-yellow-900/20 dark:border-yellow-800 dark:text-yellow-200" role="alert">
+              <div className="flex items-center gap-2">
+                <span className="font-medium">
                   Tu sesión expiró. Iniciá sesión nuevamente.
                 </span>
               </div>
@@ -53,9 +36,9 @@ function LoginContent() {
           )}
 
           {status === '401' && (
-            <div className="uss-alert-message uss-alert-message--error" role="alert">
-              <div className="uss-alert-message__content">
-                <span className="uss-alert-message--error__title">
+            <div className="p-3 rounded-md bg-red-50 border border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-200" role="alert">
+              <div className="flex items-center gap-2">
+                <span className="font-medium">
                   No autorizado para acceder a esta plataforma.
                 </span>
               </div>
@@ -63,9 +46,9 @@ function LoginContent() {
           )}
 
           {status === '403' && (
-            <div className="uss-alert-message uss-alert-message--error" role="alert">
-              <div className="uss-alert-message__content">
-                <span className="uss-alert-message--error__title">
+            <div className="p-3 rounded-md bg-red-50 border border-red-200 text-red-800 dark:bg-red-900/20 dark:border-red-800 dark:text-red-200" role="alert">
+              <div className="flex items-center gap-2">
+                <span className="font-medium">
                   No tenés permisos para acceder.
                 </span>
               </div>
@@ -73,10 +56,9 @@ function LoginContent() {
           )}
 
           <button
-            className="uss-btn uss-btn--primary"
+            className="w-full px-4 py-2.5 bg-primary text-primary-foreground font-medium rounded-md hover:bg-primary/90 transition-colors flex items-center justify-center"
             onClick={handleLogin}
             type="button"
-            style={{ width: '100%', justifyContent: 'center' }}
           >
             Iniciar sesión con Microsoft
           </button>

@@ -1,8 +1,6 @@
 import type { Metadata } from 'next';
-// Kit Digital USS — provee variables CSS y estilos base (fuentes, tokens de color, etc.)
-// Importar antes de cualquier estilo propio.
-import '@ussebastian/kitdigital/dist/css/main.css';
 import { ThemeProvider } from '@/context/ThemeContext';
+import '@/styles/globals.css';
 
 export const metadata: Metadata = {
   title: 'Plataforma BI USS',

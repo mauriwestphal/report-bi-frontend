@@ -1,41 +1,19 @@
 export function ReportsSkeleton() {
   return (
-    <>
-      <style>{`
-        @keyframes uss-skeleton-pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.35; }
-        }
-        .uss-skeleton {
-          background-color: var(--surface-subtle);
-          border-radius: var(--border-radius, 0.375rem);
-          animation: uss-skeleton-pulse 1.5s ease-in-out infinite;
-        }
-      `}</style>
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-          gap: '1.5rem',
-        }}
-      >
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="uss-card">
-            <div
-              className="uss-card__body"
-              style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
-                <div className="uss-skeleton" style={{ height: '1.1rem', width: '60%' }} />
-                <div className="uss-skeleton" style={{ height: '1.1rem', width: '4rem', borderRadius: '999px' }} />
-              </div>
-              <div className="uss-skeleton" style={{ height: '0.875rem', width: '100%' }} />
-              <div className="uss-skeleton" style={{ height: '0.875rem', width: '75%' }} />
-              <div className="uss-skeleton" style={{ height: '2.25rem', width: '8rem', marginTop: '0.25rem' }} />
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div key={i} className="border border-border rounded-lg bg-card p-4">
+          <div className="flex flex-col gap-3">
+            <div className="flex justify-between items-center gap-2">
+              <div className="h-4 w-3/5 bg-muted rounded animate-pulse" />
+              <div className="h-4 w-16 bg-muted rounded-full animate-pulse" />
             </div>
+            <div className="h-3.5 w-full bg-muted rounded animate-pulse" />
+            <div className="h-3.5 w-3/4 bg-muted rounded animate-pulse" />
+            <div className="h-9 w-32 bg-muted rounded animate-pulse mt-1" />
           </div>
-        ))}
-      </div>
-    </>
+        </div>
+      ))}
+    </div>
   )
 }
