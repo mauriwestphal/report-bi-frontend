@@ -8,7 +8,9 @@ import { z } from 'zod'
 import { login } from '@/lib/api'
 import { useDebounce } from '@/hooks/useDebounce'
 import PasswordStrength from '@/components/shared/PasswordStrength'
+import MicrosoftIcon from '@/components/shared/MicrosoftIcon'
 import { notify } from '@/utils/toast'
+import { Button } from '@/components/ui/button'
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -233,6 +235,26 @@ function LoginContent() {
               )}
             </button>
           </form>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">
+                O continuar con
+              </span>
+            </div>
+          </div>
+
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_URL_API}/auth/ms/redir`}
+          >
+            <MicrosoftIcon className="mr-2 h-4 w-4" />
+            Login with Microsoft
+          </Button>
 
           <div className="text-center text-sm text-muted-foreground">
             <p>Credenciales demo: admin@demo.com / Demo1234!</p>
