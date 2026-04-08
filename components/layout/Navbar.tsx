@@ -7,6 +7,7 @@ import { hasPermission } from '@/lib/auth/permissions'
 import { UserMenu } from './UserMenu'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { ClientSelector } from '@/components/features/clients/ClientSelector'
+import { NotificationBadge } from './NotificationBadge'
 
 interface NavLink {
   href: string
@@ -47,7 +48,7 @@ export function Navbar() {
       <div className="px-8 flex items-center justify-between h-14">
         <div className="flex items-center gap-8 flex-1">
           <span className="font-bold text-base text-foreground whitespace-nowrap">
-            Plataforma BI USS
+            ReportBI Platform
           </span>
 
           {visibleLinks.length > 0 && (
@@ -75,6 +76,7 @@ export function Navbar() {
 
         <div className="flex items-center gap-4">
           <ClientSelector />
+          <NotificationBadge />
           <UserMenu />
           <ThemeToggle />
         </div>

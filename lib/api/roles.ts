@@ -42,3 +42,7 @@ export async function deleteRole(id: number): Promise<void> {
 export async function getPermissions(): Promise<any[]> {
   return apiFetch('/api/permission')
 }
+
+export async function checkRoleName(name: string): Promise<{exists: boolean}> {
+  return apiFetch(`/api/role/check-name?name=${encodeURIComponent(name)}`)
+}

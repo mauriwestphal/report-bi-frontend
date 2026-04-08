@@ -1,11 +1,16 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { login } from '@/lib/api'
+import { useDebounce } from '@/hooks/useDebounce'
+import PasswordStrength from '@/components/shared/PasswordStrength'
+import MicrosoftIcon from '@/components/shared/MicrosoftIcon'
+import { notify } from '@/utils/toast'
+import { Button } from '@/components/ui/button'
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido'),
@@ -21,18 +26,50 @@ function LoginContent() {
   const status = searchParams?.get('status')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [rememberMe, setRememberMe] = useState(false)
+  const [emailValidation, setEmailValidation] = useState<{isValid: boolean, message: string}>({isValid: true, message: ''})
 
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    watch,
+    formState: { errors, isValid, isDirty },
   } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
       email: '',
       password: '',
     },
+    mode: 'onChange',
   })
+
+  const email = watch('email')
+  const password = watch('password')
+  const debouncedEmail = useDebounce(email, 500)
+
+  // Validación de email en tiempo real
+  useEffect(() => {
+    if (!debouncedEmail) {
+      setEmailValidation({isValid: true, message: ''})
+      return
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(debouncedEmail)) {
+      setEmailValidation({isValid: false, message: 'Email inválido'})
+    } else {
+      setEmailValidation({isValid: true, message: ''})
+    }
+  }, [debouncedEmail])
+
+  // Cargar email recordado
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('rememberedEmail')
+    if (savedEmail) {
+      setRememberMe(true)
+      // Podríamos prellenar el email aquí si usáramos setValue
+    }
+  }, [])
 
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true)
@@ -40,9 +77,20 @@ function LoginContent() {
 
     try {
       await login(data)
+      
+      // Guardar email si recordar usuario está activado
+      if (rememberMe) {
+        localStorage.setItem('rememberedEmail', data.email)
+      } else {
+        localStorage.removeItem('rememberedEmail')
+      }
+      
+      notify.success('Sesión iniciada correctamente')
       router.push('/')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Error al iniciar sesión')
+      const errorMessage = err instanceof Error ? err.message : 'Error al iniciar sesión'
+      setError(errorMessage)
+      notify.error(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -54,7 +102,7 @@ function LoginContent() {
         <div className="flex flex-col gap-6">
           <div className="text-center">
             <h1 className="text-xl font-bold text-foreground mb-2">
-              Plataforma BI USS
+              ReportBI Platform
             </h1>
             <p className="text-sm text-muted-foreground">
               Iniciar sesión con email y contraseña
@@ -109,16 +157,25 @@ function LoginContent() {
               <input
                 id="email"
                 type="email"
-                className="w-full px-3 py-2 border border-input rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                className={`w-full px-3 py-2 border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent ${
+                  emailValidation.isValid ? 'border-input' : 'border-red-500'
+                }`}
                 placeholder="tu@email.com"
                 {...register('email')}
                 disabled={isLoading}
               />
-              {errors.email && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                  {errors.email.message}
-                </p>
-              )}
+              <div className="mt-1 min-h-[20px]">
+                {emailValidation.message && (
+                  <p className="text-sm text-red-600 dark:text-red-400">
+                    {emailValidation.message}
+                  </p>
+                )}
+                {errors.email && (
+                  <p className="text-sm text-red-600 dark:text-red-400">
+                    {errors.email.message}
+                  </p>
+                )}
+              </div>
             </div>
 
             <div>
@@ -133,17 +190,40 @@ function LoginContent() {
                 {...register('password')}
                 disabled={isLoading}
               />
-              {errors.password && (
-                <p className="mt-1 text-sm text-red-600 dark:text-red-400">
-                  {errors.password.message}
-                </p>
+              <div className="mt-1 min-h-[20px]">
+                {errors.password && (
+                  <p className="text-sm text-red-600 dark:text-red-400">
+                    {errors.password.message}
+                  </p>
+                )}
+              </div>
+              {password && password.length > 0 && (
+                <div className="mt-3">
+                  <PasswordStrength password={password} showSuggestions={false} />
+                </div>
               )}
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="rememberMe"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  disabled={isLoading}
+                />
+                <label htmlFor="rememberMe" className="ml-2 text-sm text-foreground">
+                  Recordar usuario
+                </label>
+              </div>
             </div>
 
             <button
               type="submit"
               className="w-full px-4 py-2.5 bg-primary text-primary-foreground font-medium rounded-md hover:bg-primary/90 transition-colors flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={isLoading}
+              disabled={isLoading || !isValid || !emailValidation.isValid}
             >
               {isLoading ? (
                 <span className="flex items-center gap-2">
@@ -155,6 +235,26 @@ function LoginContent() {
               )}
             </button>
           </form>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">
+                O continuar con
+              </span>
+            </div>
+          </div>
+
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={() => window.location.href = `${process.env.NEXT_PUBLIC_URL_API}/auth/ms/redir`}
+          >
+            <MicrosoftIcon className="mr-2 h-4 w-4" />
+            Login with Microsoft
+          </Button>
 
           <div className="text-center text-sm text-muted-foreground">
             <p>Credenciales demo: admin@demo.com / Demo1234!</p>
