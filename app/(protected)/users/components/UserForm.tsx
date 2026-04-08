@@ -2,20 +2,20 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
 import { getUser, createUser, updateUser, getRoles } from '@/lib/api'
 import { Role } from '@/lib/types'
+import { useEmailValidation } from '@/hooks/useEmailValidation'
+import { useAutoSave } from '@/hooks/useAutoSave'
+import PasswordStrength from '@/components/shared/PasswordStrength'
+import { notify } from '@/utils/toast'
+import { userSchema, UserFormData } from '@/lib/validations/user'
 
 interface UserFormProps {
   userId?: number
   onSuccess?: () => void
-}
-
-interface FormData {
-  firstName: string
-  lastName: string
-  email: string
-  roleId: number | ''
-  isActive: boolean
 }
 
 export default function UserForm({ userId, onSuccess }: UserFormProps) {
@@ -23,14 +23,49 @@ export default function UserForm({ userId, onSuccess }: UserFormProps) {
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [roles, setRoles] = useState<Role[]>([])
-  const [errors, setErrors] = useState<Record<string, string>>({})
   
-  const [formData, setFormData] = useState<FormData>({
-    firstName: '',
-    lastName: '',
-    email: '',
-    roleId: '',
-    isActive: true
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors, isValid, isDirty },
+  } = useForm<UserFormData>({
+    resolver: zodResolver(userSchema),
+    defaultValues: {
+      firstName: '',
+      lastName: '',
+      email: '',
+      roleId: 0,
+      isActive: true,
+      password: '',
+      confirmPassword: '',
+    },
+    mode: 'onChange',
+  })
+  
+  const email = watch('email')
+  const password = watch('password')
+  const roleId = watch('roleId')
+  const isActive = watch('isActive')
+  
+  // Validación de email único
+  const emailValidation = useEmailValidation(email, userId ? email : undefined)
+  
+  // Auto-save
+  const formData = watch()
+  useAutoSave({
+    data: formData,
+    key: `user-form-${userId || 'new'}`,
+    delay: 30000,
+    onSave: (savedData: any) => {
+      if (!userId) {
+        Object.keys(savedData).forEach((key) => {
+          setValue(key as keyof UserFormData, savedData[key])
+        })
+      }
+    },
+    enabled: !userId, // Solo auto-save para creación
   })
 
   // Fetch roles
@@ -41,6 +76,7 @@ export default function UserForm({ userId, onSuccess }: UserFormProps) {
         setRoles(rolesData.roles || [])
       } catch (error) {
         console.error('Error fetching roles:', error)
+        notify.error('Error al cargar los perfiles')
       }
     }
     
@@ -54,15 +90,14 @@ export default function UserForm({ userId, onSuccess }: UserFormProps) {
         setLoading(true)
         try {
           const user = await getUser(userId)
-          setFormData({
-            firstName: user.firstName,
-            lastName: user.lastName,
-            email: user.email,
-            roleId: user.role.id,
-            isActive: user.isActive
-          })
+          setValue('firstName', user.firstName)
+          setValue('lastName', user.lastName)
+          setValue('email', user.email)
+          setValue('roleId', user.role.id)
+          setValue('isActive', user.isActive)
         } catch (error) {
           console.error('Error fetching user:', error)
+          notify.error('Error al cargar el usuario')
         } finally {
           setLoading(false)
         }
@@ -70,56 +105,36 @@ export default function UserForm({ userId, onSuccess }: UserFormProps) {
       
       fetchUser()
     }
-  }, [userId])
+  }, [userId, setValue])
 
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {}
-    
-    if (!formData.firstName.trim()) {
-      newErrors.firstName = 'El nombre es requerido'
-    }
-    
-    if (!formData.lastName.trim()) {
-      newErrors.lastName = 'El apellido es requerido'
-    }
-    
-    if (!formData.email.trim()) {
-      newErrors.email = 'El email es requerido'
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email inválido'
-    }
-    
-
-    
-    if (!formData.roleId) {
-      newErrors.roleId = 'El perfil es requerido'
-    }
-    
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!validateForm()) {
+  const onSubmit = async (data: UserFormData) => {
+    // Validar email único
+    if (emailValidation.error) {
+      notify.error(emailValidation.error)
       return
     }
     
     setSubmitting(true)
     try {
-      const userData = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        roleId: Number(formData.roleId),
-        isActive: formData.isActive
+      const userData: any = {
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        roleId: data.roleId,
+        isActive: data.isActive
+      }
+      
+      // Solo incluir password si se está creando o cambiando
+      if (!userId && data.password) {
+        userData.password = data.password
       }
       
       if (userId) {
         await updateUser({ id: userId, ...userData })
+        notify.success('Usuario actualizado correctamente')
       } else {
         await createUser(userData)
+        notify.success('Usuario creado correctamente')
       }
       
       if (onSuccess) {
@@ -127,29 +142,18 @@ export default function UserForm({ userId, onSuccess }: UserFormProps) {
       } else {
         router.push('/users')
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving user:', error)
-      setErrors({ submit: 'Error al guardar el usuario. Por favor, intente nuevamente.' })
+      const errorMessage = error.message || 'Error al guardar el usuario. Por favor, intente nuevamente.'
+      notify.error(errorMessage)
     } finally {
       setSubmitting(false)
     }
   }
 
-  const handleChange = (field: keyof FormData, value: string | boolean | number) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
-    
-    // Clear error for this field when user starts typing
-    if (errors[field]) {
-      setErrors(prev => {
-        const newErrors = { ...prev }
-        delete newErrors[field]
-        return newErrors
-      })
-    }
-  }
-
-
-
+  // Preview de permisos del rol seleccionado
+  const selectedRole = roles.find(r => r.id === roleId)
+  
   if (loading) {
     return (
       <div className="space-y-4">
@@ -164,13 +168,7 @@ export default function UserForm({ userId, onSuccess }: UserFormProps) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {errors.submit && (
-        <div className="p-3 bg-destructive/10 border border-destructive rounded-md">
-          <p className="text-sm text-destructive">{errors.submit}</p>
-        </div>
-      )}
-      
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <div className="space-y-4">
         <h3 className="font-semibold text-sm">Información del usuario</h3>
         
@@ -183,16 +181,17 @@ export default function UserForm({ userId, onSuccess }: UserFormProps) {
             <input
               id="firstName"
               type="text"
-              value={formData.firstName}
-              onChange={(e) => handleChange('firstName', e.target.value)}
               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary ${
                 errors.firstName ? 'border-destructive' : 'border-border'
               }`}
               disabled={submitting}
+              {...register('firstName')}
             />
-            {errors.firstName && (
-              <p className="text-xs text-destructive">{errors.firstName}</p>
-            )}
+            <div className="min-h-[20px]">
+              {errors.firstName && (
+                <p className="text-xs text-destructive">{errors.firstName.message}</p>
+              )}
+            </div>
           </div>
 
           {/* Last Name */}
@@ -203,16 +202,17 @@ export default function UserForm({ userId, onSuccess }: UserFormProps) {
             <input
               id="lastName"
               type="text"
-              value={formData.lastName}
-              onChange={(e) => handleChange('lastName', e.target.value)}
               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary ${
                 errors.lastName ? 'border-destructive' : 'border-border'
               }`}
               disabled={submitting}
+              {...register('lastName')}
             />
-            {errors.lastName && (
-              <p className="text-xs text-destructive">{errors.lastName}</p>
-            )}
+            <div className="min-h-[20px]">
+              {errors.lastName && (
+                <p className="text-xs text-destructive">{errors.lastName.message}</p>
+              )}
+            </div>
           </div>
 
           {/* Email */}
@@ -223,19 +223,77 @@ export default function UserForm({ userId, onSuccess }: UserFormProps) {
             <input
               id="email"
               type="email"
-              value={formData.email}
-              onChange={(e) => handleChange('email', e.target.value)}
               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary ${
-                errors.email ? 'border-destructive' : 'border-border'
+                errors.email || emailValidation.error ? 'border-destructive' : 'border-border'
               }`}
               disabled={submitting}
+              {...register('email')}
             />
-            {errors.email && (
-              <p className="text-xs text-destructive">{errors.email}</p>
-            )}
+            <div className="min-h-[20px]">
+              {emailValidation.isChecking && (
+                <p className="text-xs text-muted-foreground flex items-center">
+                  <span className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent mr-1"></span>
+                  Verificando email...
+                </p>
+              )}
+              {emailValidation.error && (
+                <p className="text-xs text-destructive">{emailValidation.error}</p>
+              )}
+              {errors.email && (
+                <p className="text-xs text-destructive">{errors.email.message}</p>
+              )}
+            </div>
           </div>
 
+          {/* Password fields for new users */}
+          {!userId && (
+            <>
+              <div className="space-y-1.5">
+                <label htmlFor="password" className="text-sm font-medium">
+                  Contraseña *
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary ${
+                    errors.password ? 'border-destructive' : 'border-border'
+                  }`}
+                  disabled={submitting}
+                  {...register('password')}
+                />
+                <div className="min-h-[20px]">
+                  {errors.password && (
+                    <p className="text-xs text-destructive">{errors.password.message}</p>
+                  )}
+                </div>
+                {password && password.length > 0 && (
+                  <div className="mt-2">
+                    <PasswordStrength password={password} />
+                  </div>
+                )}
+              </div>
 
+              <div className="space-y-1.5">
+                <label htmlFor="confirmPassword" className="text-sm font-medium">
+                  Confirmar contraseña *
+                </label>
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary ${
+                    errors.confirmPassword ? 'border-destructive' : 'border-border'
+                  }`}
+                  disabled={submitting}
+                  {...register('confirmPassword')}
+                />
+                <div className="min-h-[20px]">
+                  {errors.confirmPassword && (
+                    <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>
+                  )}
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -248,25 +306,50 @@ export default function UserForm({ userId, onSuccess }: UserFormProps) {
           </label>
           <select
             id="roleId"
-            value={formData.roleId}
-            onChange={(e) => handleChange('roleId', e.target.value)}
             className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary ${
               errors.roleId ? 'border-destructive' : 'border-border'
             }`}
             disabled={submitting || roles.length === 0}
+            {...register('roleId', { valueAsNumber: true })}
           >
-            <option value="">Seleccionar perfil</option>
+            <option value={0}>Seleccionar perfil</option>
             {roles.map((role) => (
               <option key={role.id} value={role.id}>
                 {role.name}
               </option>
             ))}
           </select>
-          {errors.roleId && (
-            <p className="text-xs text-destructive">{errors.roleId}</p>
-          )}
+          <div className="min-h-[20px]">
+            {errors.roleId && (
+              <p className="text-xs text-destructive">{errors.roleId.message}</p>
+            )}
+          </div>
           {roles.length === 0 && !submitting && (
             <p className="text-xs text-muted-foreground">Cargando perfiles...</p>
+          )}
+          
+          {/* Preview de permisos del rol seleccionado */}
+          {selectedRole && (
+            <div className="mt-3 p-3 border border-border rounded-md bg-muted/30">
+              <p className="text-sm font-medium mb-2">Permisos del perfil "{selectedRole.name}":</p>
+              {selectedRole.permissions && selectedRole.permissions.length > 0 ? (
+                <div className="space-y-1">
+                  {selectedRole.permissions.slice(0, 5).map((perm: any) => (
+                    <div key={perm.id} className="text-xs text-muted-foreground flex items-center">
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary mr-2"></span>
+                      {perm.name}
+                    </div>
+                  ))}
+                  {selectedRole.permissions.length > 5 && (
+                    <p className="text-xs text-muted-foreground">
+                      +{selectedRole.permissions.length - 5} permisos más
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">Este perfil no tiene permisos asignados</p>
+              )}
+            </div>
           )}
         </div>
       </div>
@@ -277,20 +360,20 @@ export default function UserForm({ userId, onSuccess }: UserFormProps) {
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() => handleChange('isActive', !formData.isActive)}
+            onClick={() => setValue('isActive', !isActive)}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              formData.isActive ? 'bg-primary' : 'bg-muted'
+              isActive ? 'bg-primary' : 'bg-muted'
             }`}
             disabled={submitting}
           >
             <span
               className={`inline-block h-4 w-4 transform rounded-full bg-background transition-transform ${
-                formData.isActive ? 'translate-x-6' : 'translate-x-1'
+                isActive ? 'translate-x-6' : 'translate-x-1'
               }`}
             />
           </button>
           <label className="text-sm font-medium">
-            Estado: {formData.isActive ? 'Activo' : 'Inactivo'}
+            Estado: {isActive ? 'Activo' : 'Inactivo'}
           </label>
         </div>
       </div>
@@ -307,9 +390,14 @@ export default function UserForm({ userId, onSuccess }: UserFormProps) {
         <button
           type="submit"
           className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={submitting}
+          disabled={submitting || !isValid || emailValidation.isChecking || !!emailValidation.error}
         >
-          {submitting ? 'Guardando...' : userId ? 'Actualizar usuario' : 'Crear usuario'}
+          {submitting ? (
+            <span className="flex items-center gap-2">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent"></span>
+              Guardando...
+            </span>
+          ) : userId ? 'Actualizar usuario' : 'Crear usuario'}
         </button>
       </div>
     </form>

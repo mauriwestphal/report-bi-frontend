@@ -2,12 +2,16 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { v4 as uuidv4 } from 'uuid'
 import { getMonitor, createMonitor, updateMonitor, getReportPages } from '@/lib/api/monitors'
 import { monitorSchema, type MonitorFormValues } from '@/lib/validations/monitor'
 import { useApp } from '@/hooks/useApp'
 import { hasPermission } from '@/lib/auth/permissions'
 import { PERMISSIONS } from '@/lib/auth/constants'
+import { useAutoSave } from '@/hooks/useAutoSave'
+import { notify } from '@/utils/toast'
 
 interface MonitorFormProps {
   monitorId?: number
@@ -20,19 +24,51 @@ export default function MonitorForm({ monitorId, onSuccess }: MonitorFormProps) 
   const [loading, setLoading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [reportPages, setReportPages] = useState<any[]>([])
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  const [urlValidation, setUrlValidation] = useState<{isValid: boolean, message: string}>({isValid: true, message: ''})
   
-  const [formData, setFormData] = useState<MonitorFormValues>({
-    name: '',
-    identifier: uuidv4(), // Generar UUID automáticamente
-    reportPageId: 0,
-    description: '',
-    enabled: true
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors, isValid, isDirty },
+  } = useForm<MonitorFormValues>({
+    resolver: zodResolver(monitorSchema),
+    defaultValues: {
+      name: '',
+      identifier: uuidv4(),
+      reportPageId: 0,
+      description: '',
+      enabled: true
+    },
+    mode: 'onChange',
   })
 
   // Verificar permisos
   const canCreate = hasPermission(user, PERMISSIONS.CAN_CREATE_MONITOR)
   const canEdit = hasPermission(user, PERMISSIONS.CAN_EDIT_MONITOR)
+
+  const name = watch('name')
+  const identifier = watch('identifier')
+  const reportPageId = watch('reportPageId')
+  const description = watch('description')
+  const enabled = watch('enabled')
+
+  // Auto-save
+  const formData = watch()
+  useAutoSave({
+    data: formData,
+    key: `monitor-form-${monitorId || 'new'}`,
+    delay: 30000,
+    onSave: (savedData: any) => {
+      if (!monitorId) {
+        Object.keys(savedData).forEach((key) => {
+          setValue(key as keyof MonitorFormValues, savedData[key])
+        })
+      }
+    },
+    enabled: !monitorId, // Solo auto-save para creación
+  })
 
   // Fetch report pages
   useEffect(() => {
@@ -42,6 +78,7 @@ export default function MonitorForm({ monitorId, onSuccess }: MonitorFormProps) 
         setReportPages(pages || [])
       } catch (error) {
         console.error('Error fetching report pages:', error)
+        notify.error('Error al cargar las páginas de reporte')
       }
     }
     
@@ -55,15 +92,14 @@ export default function MonitorForm({ monitorId, onSuccess }: MonitorFormProps) 
         setLoading(true)
         try {
           const monitor = await getMonitor(monitorId)
-          setFormData({
-            name: monitor.name,
-            identifier: monitor.identifier,
-            reportPageId: 0, // TODO: Obtener reportPageId del monitor
-            description: monitor.description || '',
-            enabled: monitor.isActive
-          })
+          setValue('name', monitor.name)
+          setValue('identifier', monitor.identifier)
+          setValue('reportPageId', 0) // TODO: Obtener reportPageId del monitor
+          setValue('description', monitor.description || '')
+          setValue('enabled', monitor.isActive)
         } catch (error) {
           console.error('Error fetching monitor:', error)
+          notify.error('Error al cargar el monitor')
         } finally {
           setLoading(false)
         }
@@ -71,46 +107,29 @@ export default function MonitorForm({ monitorId, onSuccess }: MonitorFormProps) 
       
       fetchMonitor()
     }
-  }, [monitorId])
+  }, [monitorId, setValue])
 
-  const validateForm = (): boolean => {
-    try {
-      monitorSchema.parse(formData)
-      setErrors({})
-      return true
-    } catch (error: any) {
-      const newErrors: Record<string, string> = {}
-      if (error.errors) {
-        error.errors.forEach((err: any) => {
-          if (err.path) {
-            newErrors[err.path[0]] = err.message
-          }
-        })
-      }
-      setErrors(newErrors)
-      return false
-    }
-  }
+  // Validación de URL Power BI (si se agrega un campo de URL en el futuro)
+  useEffect(() => {
+    // Por ahora, esta función está preparada para cuando se agregue un campo de URL
+    // Se puede usar para validar URLs de Power BI
+  }, [])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!validateForm()) {
-      return
-    }
-    
+  const onSubmit = async (data: MonitorFormValues) => {
     // Verificar permisos
     if ((monitorId && !canEdit) || (!monitorId && !canCreate)) {
-      setErrors({ submit: 'No tienes permisos para realizar esta acción' })
+      notify.error('No tienes permisos para realizar esta acción')
       return
     }
     
     setSubmitting(true)
     try {
       if (monitorId) {
-        await updateMonitor(monitorId, formData)
+        await updateMonitor(monitorId, data)
+        notify.success('Monitor actualizado correctamente')
       } else {
-        await createMonitor(formData)
+        await createMonitor(data)
+        notify.success('Monitor creado correctamente')
       }
       
       if (onSuccess) {
@@ -120,29 +139,15 @@ export default function MonitorForm({ monitorId, onSuccess }: MonitorFormProps) 
       }
     } catch (error: any) {
       console.error('Error saving monitor:', error)
-      setErrors({ 
-        submit: error.message || 'Error al guardar el monitor. Por favor, intente nuevamente.' 
-      })
+      const errorMessage = error.message || 'Error al guardar el monitor. Por favor, intente nuevamente.'
+      notify.error(errorMessage)
     } finally {
       setSubmitting(false)
     }
   }
 
-  const handleChange = (field: keyof MonitorFormValues, value: string | boolean | number) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
-    
-    // Clear error for this field when user starts typing
-    if (errors[field]) {
-      setErrors(prev => {
-        const newErrors = { ...prev }
-        delete newErrors[field]
-        return newErrors
-      })
-    }
-  }
-
   const handleGenerateNewUUID = () => {
-    handleChange('identifier', uuidv4())
+    setValue('identifier', uuidv4())
   }
 
   if (loading) {
@@ -159,13 +164,7 @@ export default function MonitorForm({ monitorId, onSuccess }: MonitorFormProps) 
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      {errors.submit && (
-        <div className="p-3 bg-destructive/10 border border-destructive rounded-md">
-          <p className="text-sm text-destructive">{errors.submit}</p>
-        </div>
-      )}
-      
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
       <div className="space-y-4">
         <h3 className="font-semibold text-sm">Información del monitor</h3>
         
@@ -178,17 +177,18 @@ export default function MonitorForm({ monitorId, onSuccess }: MonitorFormProps) 
             <input
               id="name"
               type="text"
-              value={formData.name}
-              onChange={(e) => handleChange('name', e.target.value)}
               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary ${
                 errors.name ? 'border-destructive' : 'border-border'
               }`}
               disabled={submitting}
               placeholder="Ej: Dashboard de Ventas"
+              {...register('name')}
             />
-            {errors.name && (
-              <p className="text-xs text-destructive">{errors.name}</p>
-            )}
+            <div className="min-h-[20px]">
+              {errors.name && (
+                <p className="text-xs text-destructive">{errors.name.message}</p>
+              )}
+            </div>
           </div>
 
           {/* Identifier */}
@@ -200,11 +200,11 @@ export default function MonitorForm({ monitorId, onSuccess }: MonitorFormProps) 
               <input
                 id="identifier"
                 type="text"
-                value={formData.identifier}
                 readOnly
                 className={`w-full px-3 py-2 border rounded-md bg-muted ${
                   errors.identifier ? 'border-destructive' : 'border-border'
                 }`}
+                {...register('identifier')}
               />
               <button
                 type="button"
@@ -215,9 +215,11 @@ export default function MonitorForm({ monitorId, onSuccess }: MonitorFormProps) 
                 Generar nuevo
               </button>
             </div>
-            {errors.identifier && (
-              <p className="text-xs text-destructive">{errors.identifier}</p>
-            )}
+            <div className="min-h-[20px]">
+              {errors.identifier && (
+                <p className="text-xs text-destructive">{errors.identifier.message}</p>
+              )}
+            </div>
             <p className="text-xs text-muted-foreground">
               UUID único para identificar este monitor
             </p>
@@ -230,12 +232,11 @@ export default function MonitorForm({ monitorId, onSuccess }: MonitorFormProps) 
             </label>
             <select
               id="reportPageId"
-              value={formData.reportPageId}
-              onChange={(e) => handleChange('reportPageId', parseInt(e.target.value))}
               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-primary ${
                 errors.reportPageId ? 'border-destructive' : 'border-border'
               }`}
               disabled={submitting || reportPages.length === 0}
+              {...register('reportPageId', { valueAsNumber: true })}
             >
               <option value={0}>Seleccionar página de reporte</option>
               {reportPages.map((page) => (
@@ -244,9 +245,11 @@ export default function MonitorForm({ monitorId, onSuccess }: MonitorFormProps) 
                 </option>
               ))}
             </select>
-            {errors.reportPageId && (
-              <p className="text-xs text-destructive">{errors.reportPageId}</p>
-            )}
+            <div className="min-h-[20px]">
+              {errors.reportPageId && (
+                <p className="text-xs text-destructive">{errors.reportPageId.message}</p>
+              )}
+            </div>
             {reportPages.length === 0 && !submitting && (
               <p className="text-xs text-muted-foreground">Cargando páginas de reporte...</p>
             )}
@@ -259,12 +262,11 @@ export default function MonitorForm({ monitorId, onSuccess }: MonitorFormProps) 
             </label>
             <textarea
               id="description"
-              value={formData.description || ''}
-              onChange={(e) => handleChange('description', e.target.value)}
               className="w-full px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
               disabled={submitting}
               rows={3}
               placeholder="Descripción opcional del monitor"
+              {...register('description')}
             />
           </div>
         </div>
@@ -276,21 +278,39 @@ export default function MonitorForm({ monitorId, onSuccess }: MonitorFormProps) 
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() => handleChange('enabled', !formData.enabled)}
+            onClick={() => setValue('enabled', !enabled)}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-              formData.enabled ? 'bg-primary' : 'bg-muted'
+              enabled ? 'bg-primary' : 'bg-muted'
             }`}
             disabled={submitting}
           >
             <span
               className={`inline-block h-4 w-4 transform rounded-full bg-background transition-transform ${
-                formData.enabled ? 'translate-x-6' : 'translate-x-1'
+                enabled ? 'translate-x-6' : 'translate-x-1'
               }`}
             />
           </button>
           <label className="text-sm font-medium">
-            Estado: {formData.enabled ? 'Activo' : 'Inactivo'}
+            Estado: {enabled ? 'Activo' : 'Inactivo'}
           </label>
+        </div>
+      </div>
+
+      {/* Preview de permisos requeridos */}
+      <div className="space-y-4 p-4 border border-border rounded-md bg-muted/30">
+        <h3 className="font-semibold text-sm">Permisos requeridos</h3>
+        <p className="text-sm text-muted-foreground">
+          Para acceder a este monitor, los usuarios necesitarán el permiso: <code className="px-1 py-0.5 bg-muted rounded text-xs">CAN_VIEW_MONITOR</code>
+        </p>
+        <div className="space-y-2">
+          <div className="flex items-center text-sm">
+            <span className="h-2 w-2 rounded-full bg-primary mr-2"></span>
+            <span>Permiso básico: Ver monitor</span>
+          </div>
+          <div className="flex items-center text-sm">
+            <span className="h-2 w-2 rounded-full bg-blue-500 mr-2"></span>
+            <span>Permiso adicional: Ver reportes Power BI</span>
+          </div>
         </div>
       </div>
 
@@ -306,9 +326,14 @@ export default function MonitorForm({ monitorId, onSuccess }: MonitorFormProps) 
         <button
           type="submit"
           className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={submitting}
+          disabled={submitting || !isValid || (monitorId && !canEdit) || (!monitorId && !canCreate)}
         >
-          {submitting ? 'Guardando...' : monitorId ? 'Actualizar monitor' : 'Crear monitor'}
+          {submitting ? (
+            <span className="flex items-center gap-2">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent"></span>
+              Guardando...
+            </span>
+          ) : monitorId ? 'Actualizar monitor' : 'Crear monitor'}
         </button>
       </div>
     </form>
