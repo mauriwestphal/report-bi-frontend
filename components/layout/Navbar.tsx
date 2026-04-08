@@ -7,6 +7,7 @@ import { hasPermission } from '@/lib/auth/permissions'
 import { UserMenu } from './UserMenu'
 import { ThemeToggle } from '@/components/ui/ThemeToggle'
 import { ClientSelector } from '@/components/features/clients/ClientSelector'
+import { NotificationBadge } from './NotificationBadge'
 
 interface NavLink {
   href: string
@@ -75,6 +76,7 @@ export function Navbar() {
 
         <div className="flex items-center gap-4">
           <ClientSelector />
+          <NotificationBadge />
           <UserMenu />
           <ThemeToggle />
         </div>
