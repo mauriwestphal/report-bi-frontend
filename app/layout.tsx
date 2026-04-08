@@ -3,7 +3,7 @@ import { ThemeProvider } from '@/context/ThemeContext';
 import '@/styles/globals.css';
 
 export const metadata: Metadata = {
-  title: 'Plataforma BI USS',
+  title: 'ReportBI Platform',
   description: 'Plataforma de reportes Power BI',
 };
 

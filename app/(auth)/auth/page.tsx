@@ -100,7 +100,7 @@ function LoginContent() {
         <div className="flex flex-col gap-6">
           <div className="text-center">
             <h1 className="text-xl font-bold text-foreground mb-2">
-              Plataforma BI USS
+              ReportBI Platform
             </h1>
             <p className="text-sm text-muted-foreground">
               Iniciar sesión con email y contraseña

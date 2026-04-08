@@ -48,7 +48,7 @@ export function Navbar() {
       <div className="px-8 flex items-center justify-between h-14">
         <div className="flex items-center gap-8 flex-1">
           <span className="font-bold text-base text-foreground whitespace-nowrap">
-            Plataforma BI USS
+            ReportBI Platform
           </span>
 
           {visibleLinks.length > 0 && (
