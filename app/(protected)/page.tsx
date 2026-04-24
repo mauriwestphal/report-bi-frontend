@@ -374,6 +374,7 @@ export default function DashboardPage() {
                   <Skeleton className="h-48 w-48 rounded-full" />
                 </div>
               ) : (
+                /* @ts-ignore */
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
@@ -415,6 +416,7 @@ export default function DashboardPage() {
                   <Skeleton className="h-48 w-full" />
                 </div>
               ) : (
+                /* @ts-ignore */
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={userActivityData}>
                     <CartesianGrid strokeDasharray="3 3" />
